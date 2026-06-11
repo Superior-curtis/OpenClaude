@@ -91,7 +91,11 @@
     <!-- RIGHT: live status -->
     <aside class="col-status">
       <section class="card sticky">
-        <div class="card-head"><h2>Live status</h2></div>
+        <div class="card-head"><h2>System</h2></div>
+        <div id="detectBlock" class="status-block">
+          <div class="status-title">Installation scan</div>
+          <div id="detectResult" class="kv">Scanning…</div>
+        </div>
         <div class="status-block">
           <div class="status-title">Claude Code</div>
           <div id="currentConfig" class="kv">Loading…</div>
@@ -101,6 +105,7 @@
           <div id="currentDesktopConfig" class="kv">Loading…</div>
         </div>
         <p class="hint">Claude Code file: <code id="settingsPath"></code></p>
+        <p class="hint">Data directory: <code id="desktopDataPath"></code></p>
         <p class="hint">A backup is saved before every change. Your key is stored only on this computer and sent only to the provider you choose.</p>
       </section>
     </aside>

@@ -654,6 +654,52 @@ function desktopInstalled() {
   return fs.existsSync(desktopDataDir());
 }
 
+// ── Claude Code & Claude Desktop installation detection ───
+
+function detectClaudeCode() {
+  const result = { installed: false, settingsPath: SETTINGS_PATH, hasSettings: false, hasEnv: false };
+  try {
+    result.hasSettings = fs.existsSync(SETTINGS_PATH);
+    if (result.hasSettings) {
+      const s = JSON.parse(fs.readFileSync(SETTINGS_PATH, 'utf8'));
+      result.hasEnv = Boolean(s.env && Object.keys(s.env).length > 0);
+      result.installed = true;
+    } else {
+      // settings.json doesn't exist yet, but Claude Code might still be installed
+      // — check for the .claude directory or the claude binary
+      result.installed = fs.existsSync(CLAUDE_DIR);
+    }
+  } catch {}
+  return result;
+}
+
+function detectClaudeDesktop() {
+  const result = { installed: false, appPath: null, dataDir: desktopDataDir(), thirdPartyDir: desktop3pDataDir() };
+  if (process.platform === 'darwin') {
+    const appPath = '/Applications/Claude.app';
+    const altPath = path.join(os.homedir(), 'Applications', 'Claude.app');
+    if (fs.existsSync(appPath)) result.appPath = appPath;
+    else if (fs.existsSync(altPath)) result.appPath = altPath;
+  } else if (process.platform === 'win32') {
+    const localPrograms = path.join(process.env.LOCALAPPDATA || '', 'Programs');
+    const possible = [
+      path.join(process.env['ProgramFiles'] || 'C:\\Program Files', 'Claude', 'Claude.exe'),
+      path.join(process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)', 'Claude', 'Claude.exe'),
+      path.join(localPrograms, 'Claude', 'Claude.exe'),
+    ];
+    for (const p of possible) { if (fs.existsSync(p)) { result.appPath = p; break; } }
+  } else {
+    const possible = ['/usr/bin/claude-desktop', '/opt/Claude/claude-desktop', path.join(os.homedir(), '.local/bin/claude-desktop')];
+    for (const p of possible) { if (fs.existsSync(p)) { result.appPath = p; break; } }
+  }
+  // Also check by data dir existence
+  if (!result.appPath && fs.existsSync(desktopDataDir())) result.installed = true;
+  if (result.appPath) result.installed = true;
+  result.hasDataDir = fs.existsSync(desktopDataDir());
+  result.hasThirdPartyDir = fs.existsSync(desktop3pDataDir());
+  return result;
+}
+
 function readDesktopConfig() {
   const meta = readDesktopMeta();
   if (!meta.appliedId) return { active: false };
@@ -719,6 +765,13 @@ function restoreDesktopConfig() {
 }
 
 // --- IPC handlers -----------------------------------------------------------
+
+ipcMain.handle('claude:detect', () => ({
+  platform: process.platform,
+  homeDir: os.homedir(),
+  code: detectClaudeCode(),
+  desktop: detectClaudeDesktop()
+}));
 
 ipcMain.handle('config:get', () => {
   const settings = readSettings();

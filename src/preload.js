@@ -1,6 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('openclaude', {
+  detectInstall: () => ipcRenderer.invoke('claude:detect'),
   getConfig: () => ipcRenderer.invoke('config:get'),
   applyConfig: (cfg) => ipcRenderer.invoke('config:apply', cfg),
   restoreOfficial: () => ipcRenderer.invoke('config:restore'),

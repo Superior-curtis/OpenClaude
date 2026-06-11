@@ -193,6 +193,30 @@ async function loadModels() {
 
 function cleanRoute(m) { return m.split(ZWSP).join('').replace(/ \(claude\)$/, ''); }
 
+async function detectInstall() {
+  try {
+    const d = await window.openclaude.detectInstall();
+    const lines = [];
+    lines.push(`<div><span class="k">Platform</span>${d.platform === 'darwin' ? 'macOS' : d.platform === 'win32' ? 'Windows' : 'Linux'}</div>`);
+    lines.push(`<div><span class="k">Home</span><code>${d.homeDir}</code></div>`);
+    const cc = d.code;
+    lines.push(`<div><span class="k">Claude Code</span>${cc.installed ? 'Found' : 'Not found'} &middot; settings ${cc.hasSettings ? 'yes' : 'no'}</div>`);
+    if (cc.settingsPath) lines.push(`<div><span class="k">Settings</span><code>${cc.settingsPath}</code></div>`);
+    const cd = d.desktop;
+    lines.push(`<div><span class="k">Claude Desktop</span>${cd.installed ? 'Found' : 'Not found'}</div>`);
+    if (cd.appPath) lines.push(`<div><span class="k">App path</span><code>${cd.appPath}</code></div>`);
+    if (cd.dataDir) lines.push(`<div><span class="k">Data dir</span><code>${cd.dataDir}</code></div>`);
+    $('detectResult').innerHTML = lines.join('');
+    $('desktopDataPath').textContent = cd.dataDir || '—';
+    if (!cd.installed) {
+      $('applyDesktopBtn').disabled = true;
+      $('restoreDesktopBtn').disabled = true;
+    }
+  } catch (e) {
+    $('detectResult').innerHTML = '<div>Detection unavailable</div>';
+  }
+}
+
 async function refreshStatus() {
   const cfg = await window.openclaude.getConfig();
   const desktop = await window.openclaude.getDesktopConfig();
@@ -332,4 +356,5 @@ $('applyDesktopBtn').addEventListener('click', applyDesktop);
 $('restoreDesktopBtn').addEventListener('click', restoreDesktop);
 
 renderProviders();
+detectInstall();
 refreshStatus();
