@@ -3,7 +3,7 @@
   "productName": "OpenClaude",
   "version": "0.1.0",
   "description": "Use Claude Code and Claude Desktop with third-party AI providers — no JSON editing required.",
-  "author": "Curtis",
+  "author": "Curtis <curtis@openclaude.app>",
   "main": "src/main.js",
   "license": "MIT",
   "scripts": {
@@ -25,7 +25,8 @@
       "src/**/*",
       "renderer/**/*",
       "build/icon.png",
-      "build/icon.icns"
+      "build/icon.icns",
+      "build/icon.ico"
     ],
     "mac": {
       "category": "public.app-category.developer-tools",
@@ -39,7 +40,7 @@
       "target": [
         { "target": "nsis", "arch": ["x64", "arm64"] }
       ],
-      "icon": "build/icon.png"
+      "icon": "build/icon.ico"
     },
     "nsis": {
       "oneClick": false,
@@ -47,10 +48,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "OpenClaude",
-      "installerIcon": "build/icon.png",
-      "uninstallerIcon": "build/icon.png",
-      "installerHeaderIcon": "build/icon.png"
+      "shortcutName": "OpenClaude"
     },
     "linux": {
       "target": [
