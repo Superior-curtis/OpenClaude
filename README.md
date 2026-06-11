@@ -33,25 +33,51 @@ OpenClaude is a desktop app that configures Claude Code and Claude Desktop to ta
 
 | Platform | Download |
 |----------|----------|
-| **macOS** Apple Silicon | `OpenClaude-0.1.0-arm64.dmg` |
-| **macOS** Intel | `OpenClaude-0.1.0-x64.dmg` |
-| **Windows** x64 | `OpenClaude-Setup-0.1.0-x64.exe` |
-| **Windows** 32-bit | `OpenClaude-Setup-0.1.0-ia32.exe` |
+| **macOS** Apple Silicon | `OpenClaude-0.1.6-arm64.dmg` |
+| **macOS** Intel | `OpenClaude-0.1.6-x64.dmg` |
+| **Windows** x64 | `OpenClaude-Setup-0.1.6-x64.exe` |
+| **Windows** 32-bit | `OpenClaude-Setup-0.1.6-ia32.exe` |
 | **Linux** x64 | `.AppImage` or `.deb` |
 | **Linux** ARM64 | `-arm64.AppImage` or `_arm64.deb` |
 
 **[All downloads →](https://github.com/Superior-curtis/OpenClaude/releases/latest)**
 
-> **Why the warning?** Apple requires a paid developer certificate ($99/year) to remove the Gatekeeper warning. Microsoft requires an EV code signing certificate ($300-500/year) for SmartScreen. These fees are not practical for an open-source project — the source code is public and auditable. The app is safe: it never sends your data anywhere except the provider you choose.
+> **Why the warning?** Apple requires a paid developer certificate ($99/year) to remove the Gatekeeper warning. Microsoft requires an EV code signing certificate ($300-500/year) for SmartScreen. These fees are not practical for an open-source project — the source code is public and auditable. The app is safe: it never sends your data anywhere except the provider you choose. See [Troubleshooting](#troubleshooting) for workarounds.
 
 ## Quick start
 
-1. **Pick a provider** from the 16 presets, or enter a custom URL
+1. **Pick a provider** from the 18 presets, or enter a custom URL
 2. **Paste your API key** and click Load models
 3. **Pick models** for main and fast tasks
 4. **Click Apply** for Claude Code, Claude Desktop, or both
 
-Switch back to official Anthropic anytime — one click on Reset. Full walkthrough in the [tutorial](TUTORIAL.md).
+> **First time?** Read the **[full setup tutorial →](TUTORIAL.md)** for step-by-step instructions with screenshots.
+
+Switch back to official Anthropic anytime — one click on Reset.
+
+## Troubleshooting
+
+### "Provider default" instead of my model?
+Load models first (Step 2). If the models endpoint returns nothing, pick a model from the dropdown manually.
+
+### Claude Desktop shows a blank model picker?
+Keep OpenClaude running in the background (tray icon). The proxy handles protocol translation for non-Claude models.
+
+### macOS says "unidentified developer"?
+**Option A:** Right-click the app → Open.
+**Option B:** Run this command in Terminal:
+```bash
+xattr -d com.apple.quarantine /Applications/OpenClaude.app
+```
+
+### Windows SmartScreen warning?
+Click **"More info" → "Run anyway"**. The builds are unsigned.
+
+### Where are my API keys stored?
+Only in `~/.claude/settings.json` on your machine. Never sent anywhere except your chosen provider.
+
+### I need to restore Claude Code's settings?
+A timestamped backup is created before every change. Look in `~/.claude/settings.json.openclaude-backup-*`.
 
 ## Providers
 

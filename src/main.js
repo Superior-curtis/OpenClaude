@@ -1110,7 +1110,7 @@ ipcMain.handle('copilot:auth-start', async () => {
     if (!data.device_code) return { ok: false, error: data.error_description || 'Failed to start device auth' };
     copilotDeviceCode = data.device_code;
     copilotPollInterval = data.interval || 5;
-    return { ok: true, verification_uri: data.verification_uri, user_code: data.user_code };
+    return { ok: true, verification_uri: data.verification_uri, user_code: data.user_code, interval: copilotPollInterval };
   } catch (err) {
     return { ok: false, error: err.message };
   }
@@ -1135,6 +1135,7 @@ ipcMain.handle('copilot:auth-poll', async () => {
       return { ok: true, done: true };
     }
     if (data.error === 'authorization_pending') return { ok: true, done: false };
+    if (data.error === 'slow_down') return { ok: true, done: false, slowDown: true };
     return { ok: false, error: data.error_description || data.error || 'Auth failed' };
   } catch (err) {
     return { ok: false, error: err.message };

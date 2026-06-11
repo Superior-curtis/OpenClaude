@@ -408,7 +408,7 @@ async function copilotLogin() {
   if (!res.ok) { showResult(false, `Auth failed: ${res.error}`); return; }
   $('copilotStatus').textContent = `Open ${res.verification_uri} and enter code: ${res.user_code}`;
   $('copilotLoginBtn').classList.add('hidden');
-  // Poll for token
+  let waitMs = (res.interval || 5) * 1000;
   const poll = async () => {
     const p = await window.openclaude.copilotAuthPoll();
     if (p.ok && p.done) {
@@ -424,9 +424,10 @@ async function copilotLogin() {
       setBusy(false);
       return;
     }
-    setTimeout(poll, 3000);
+    if (p.slowDown) waitMs += 5000;
+    setTimeout(poll, waitMs);
   };
-  setTimeout(poll, 2000);
+  setTimeout(poll, waitMs);
 }
 
 async function copilotLogout() {
