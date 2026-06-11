@@ -6,7 +6,7 @@ A desktop app that lets you use **Claude Code** and **Claude Desktop** with any 
 
 ## Download
 
-**[⬇ Download the latest release](https://github.com/Superior-curtis/OpenClaude/releases/latest)**
+**[⬇ Download the latest release](https://github.com/Superior-curtis/OpenClaude/releases/latest)** · **[📖 Tutorial](TUTORIAL.md)**
 
 | Platform | Package |
 |----------|---------|
