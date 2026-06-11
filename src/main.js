@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, Tray, Menu, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, Tray, Menu, nativeImage, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -676,25 +676,86 @@ function detectClaudeCode() {
 function detectClaudeDesktop() {
   const result = { installed: false, appPath: null, dataDir: desktopDataDir(), thirdPartyDir: desktop3pDataDir() };
   if (process.platform === 'darwin') {
-    const appPath = '/Applications/Claude.app';
-    const altPath = path.join(os.homedir(), 'Applications', 'Claude.app');
-    if (fs.existsSync(appPath)) result.appPath = appPath;
-    else if (fs.existsSync(altPath)) result.appPath = altPath;
+    const paths = [
+      '/Applications/Claude.app',
+      path.join(os.homedir(), 'Applications', 'Claude.app'),
+      path.join(os.homedir(), 'Desktop', 'Claude.app'),
+    ];
+    for (const p of paths) { if (fs.existsSync(p)) { result.appPath = p; break; } }
+    // Also search /Applications for any Claude*.app
+    if (!result.appPath) {
+      try {
+        const apps = fs.readdirSync('/Applications').filter(f => f.startsWith('Claude') && f.endsWith('.app'));
+        if (apps.length) result.appPath = path.join('/Applications', apps[0]);
+      } catch {}
+    }
   } else if (process.platform === 'win32') {
-    const localPrograms = path.join(process.env.LOCALAPPDATA || '', 'Programs');
+    const local = process.env.LOCALAPPDATA || '';
+    const programs = process.env.ProgramFiles || 'C:\\Program Files';
+    const programsX86 = process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)';
     const possible = [
-      path.join(process.env['ProgramFiles'] || 'C:\\Program Files', 'Claude', 'Claude.exe'),
-      path.join(process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)', 'Claude', 'Claude.exe'),
-      path.join(localPrograms, 'Claude', 'Claude.exe'),
+      // Standard installs
+      path.join(programs, 'Claude', 'Claude.exe'),
+      path.join(programsX86, 'Claude', 'Claude.exe'),
+      // Per-user installs (squirrel/electron-builder)
+      path.join(local, 'Programs', 'Claude', 'Claude.exe'),
+      path.join(local, 'Claude', 'Claude.exe'),
+      path.join(local, 'claude-desktop', 'Claude.exe'),
+      // Microsoft Store style
+      path.join(programs, 'WindowsApps', 'Anthropic.Claude_*', 'Claude.exe'),
+      // Common custom paths  
+      path.join(os.homedir(), 'AppData', 'Local', 'Claude', 'Claude.exe'),
+    ];
+    for (const p of possible) {
+      if (p.includes('*')) {
+        // Glob pattern — check parent dir
+        const parent = path.dirname(p);
+        try {
+          const entries = fs.readdirSync(parent, { withFileTypes: true });
+          for (const e of entries) {
+            if (e.isDirectory() && e.name.startsWith('Anthropic')) {
+              const exe = path.join(parent, e.name, 'Claude.exe');
+              if (fs.existsSync(exe)) { result.appPath = exe; break; }
+            }
+          }
+        } catch {}
+        if (result.appPath) break;
+      } else if (fs.existsSync(p)) {
+        result.appPath = p;
+        break;
+      }
+    }
+    // Even without exe, check if data dir exists (Claude was run once)
+    if (!result.appPath && fs.existsSync(desktopDataDir())) {
+      result.installed = true;
+    }
+  } else {
+    const possible = [
+      '/usr/bin/claude-desktop', '/usr/local/bin/claude-desktop',
+      '/opt/Claude/claude-desktop', '/opt/claude-desktop/claude-desktop',
+      path.join(os.homedir(), '.local/bin/claude-desktop'),
+      path.join(os.homedir(), 'bin/claude-desktop'),
     ];
     for (const p of possible) { if (fs.existsSync(p)) { result.appPath = p; break; } }
-  } else {
-    const possible = ['/usr/bin/claude-desktop', '/opt/Claude/claude-desktop', path.join(os.homedir(), '.local/bin/claude-desktop')];
-    for (const p of possible) { if (fs.existsSync(p)) { result.appPath = p; break; } }
+    // Also check common Linux app directories
+    if (!result.appPath) {
+      try {
+        const desktopFiles = ['/usr/share/applications/claude-desktop.desktop',
+          path.join(os.homedir(), '.local/share/applications/claude-desktop.desktop')];
+        for (const df of desktopFiles) {
+          if (fs.existsSync(df)) {
+            try {
+              const content = fs.readFileSync(df, 'utf8');
+              const exec = content.match(/^Exec=(.+)$/m);
+              if (exec) result.appPath = exec[1].split(' ')[0];
+            } catch {}
+            break;
+          }
+        }
+      } catch {}
+    }
   }
-  // Also check by data dir existence
-  if (!result.appPath && fs.existsSync(desktopDataDir())) result.installed = true;
-  if (result.appPath) result.installed = true;
+  result.installed = Boolean(result.appPath) || fs.existsSync(desktopDataDir());
   result.hasDataDir = fs.existsSync(desktopDataDir());
   result.hasThirdPartyDir = fs.existsSync(desktop3pDataDir());
   return result;
@@ -772,6 +833,20 @@ ipcMain.handle('claude:detect', () => ({
   code: detectClaudeCode(),
   desktop: detectClaudeDesktop()
 }));
+
+ipcMain.handle('claude:browse-desktop', async () => {
+  const win = BrowserWindow.getFocusedWindow();
+  const filters = [];
+  if (process.platform === 'darwin') filters.push({ name: 'Applications', extensions: ['app'] });
+  else if (process.platform === 'win32') filters.push({ name: 'Executables', extensions: ['exe'] });
+  const result = await dialog.showOpenDialog(win, {
+    title: 'Locate Claude Desktop',
+    properties: ['openFile'],
+    filters
+  });
+  if (result.canceled || !result.filePaths.length) return null;
+  return result.filePaths[0];
+});
 
 ipcMain.handle('config:get', () => {
   const settings = readSettings();

@@ -197,20 +197,44 @@ async function detectInstall() {
   try {
     const d = await window.openclaude.detectInstall();
     const lines = [];
-    lines.push(`<div><span class="k">Platform</span>${d.platform === 'darwin' ? 'macOS' : d.platform === 'win32' ? 'Windows' : 'Linux'}</div>`);
-    lines.push(`<div><span class="k">Home</span><code>${d.homeDir}</code></div>`);
+
+    // Claude Code
     const cc = d.code;
-    lines.push(`<div><span class="k">Claude Code</span>${cc.installed ? 'Found' : 'Not found'} &middot; settings ${cc.hasSettings ? 'yes' : 'no'}</div>`);
-    if (cc.settingsPath) lines.push(`<div><span class="k">Settings</span><code>${cc.settingsPath}</code></div>`);
+    if (cc.installed) {
+      lines.push(`<div class="detect-ok">Claude Code found &mdash; <code>${cc.settingsPath}</code></div>`);
+    } else {
+      lines.push(`<div class="detect-miss">Claude Code not detected. Install it first, then restart OpenClaude.</div>`);
+      lines.push(`<div style="font-size:11px;color:var(--text-faint)">Expected at: <code>${cc.settingsPath}</code></div>`);
+    }
+
+    // Claude Desktop
     const cd = d.desktop;
-    lines.push(`<div><span class="k">Claude Desktop</span>${cd.installed ? 'Found' : 'Not found'}</div>`);
-    if (cd.appPath) lines.push(`<div><span class="k">App path</span><code>${cd.appPath}</code></div>`);
-    if (cd.dataDir) lines.push(`<div><span class="k">Data dir</span><code>${cd.dataDir}</code></div>`);
-    $('detectResult').innerHTML = lines.join('');
-    $('desktopDataPath').textContent = cd.dataDir || '—';
-    if (!cd.installed) {
+    if (cd.installed) {
+      const pathInfo = cd.appPath ? `<code>${cd.appPath}</code>` : `data at <code>${cd.dataDir}</code>`;
+      lines.push(`<div class="detect-ok">Claude Desktop found &mdash; ${pathInfo}</div>`);
+      $('applyDesktopBtn').disabled = false;
+      $('restoreDesktopBtn').disabled = false;
+    } else {
+      lines.push(`<div class="detect-miss">Claude Desktop not found.</div>`);
+      lines.push(`<div style="font-size:11px;color:var(--text-faint)">Searched standard install paths. If you installed Claude Desktop elsewhere, locate it manually:</div>`);
+      lines.push(`<button id="browseDesktopBtn" class="btn btn-soft" style="margin-top:6px">Browse for Claude Desktop...</button>`);
       $('applyDesktopBtn').disabled = true;
       $('restoreDesktopBtn').disabled = true;
+    }
+
+    $('detectResult').innerHTML = lines.join('');
+    $('desktopDataPath').textContent = cd.dataDir || '—';
+
+    // Wire up browse button if present
+    const browseBtn = document.getElementById('browseDesktopBtn');
+    if (browseBtn) {
+      browseBtn.addEventListener('click', async () => {
+        const p = await window.openclaude.browseDesktop();
+        if (p) {
+          // Re-run detection after manual selection
+          detectInstall();
+        }
+      });
     }
   } catch (e) {
     $('detectResult').innerHTML = '<div>Detection unavailable</div>';

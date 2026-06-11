@@ -161,3 +161,13 @@ code { background: var(--bg); padding: 2px 6px; border-radius: 5px; font-size: 1
 .status-title { font-size: 12px; font-weight: 700; color: var(--accent-hi); margin-bottom: 8px; text-transform: uppercase; letter-spacing: .5px; }
 .kv { font-size: 12.5px; line-height: 1.7; }
 .kv .k { color: var(--text-faint); display: inline-block; min-width: 92px; }
+
+.detect-ok {
+  color: var(--green); font-size: 12px; padding: 4px 0;
+  border-left: 2px solid var(--green); padding-left: 10px; margin: 2px 0;
+}
+.detect-ok code { font-size: 10.5px; display: block; margin-top: 2px; }
+.detect-miss {
+  color: var(--red); font-size: 12px; padding: 4px 0;
+  border-left: 2px solid var(--red); padding-left: 10px; margin: 2px 0;
+}
