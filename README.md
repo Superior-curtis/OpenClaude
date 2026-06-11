@@ -1,27 +1,42 @@
 # OpenClaude
 
-A friendly desktop app that lets anyone use **Claude Code** and **Claude Desktop** with third-party AI providers (OpenCode Zen, Z.AI, DeepSeek, or any Anthropic-compatible API) — no JSON editing required.
+A desktop app that lets you use **Claude Code** and **Claude Desktop** with any AI provider — no JSON editing required. Built by Curtis.
 
-![platforms](https://img.shields.io/badge/platforms-macOS%20%7C%20Windows%20%7C%20Linux-blue)
+![platforms](https://img.shields.io/badge/platforms-macOS%20(Intel%20%26%20Apple%20Silicon)%20%7C%20Windows%20%7C%20Linux-blue)
+
+## Download
+
+**[⬇ Download the latest release](https://github.com/Superior-curtis/OpenClaude/releases/latest)**
+
+| Platform | Package |
+|----------|---------|
+| macOS (Intel + Apple Silicon) | `.dmg` or `.zip` |
+| Windows (x64 + ARM64) | NSIS installer or portable `.exe` |
+| Linux (x64 + ARM64) | `.AppImage` or `.deb` |
+
+> Unsigned builds — macOS: right-click → Open to bypass Gatekeeper. Windows: SmartScreen may show a warning.
+
+## Supported Providers (16)
+
+**Aggregators:** OpenCode Go, OpenCode Zen, OpenRouter  
+**Official APIs:** Anthropic, OpenAI, Google Gemini, xAI Grok, DeepSeek, Mistral AI  
+**Fast Inference:** Groq, Together AI, Fireworks AI, Cerebras  
+**Specialized:** Perplexity, Z.AI (GLM), NVIDIA NIM  
+**Custom:** Any Anthropic or OpenAI-compatible endpoint
 
 ## What it does
 
-1. **Pick a provider** — OpenCode Zen, Z.AI, DeepSeek, or a custom URL
-2. **Paste your API key** — and load the provider's live model list
-3. **Test the connection** — sends a real tiny message to verify everything works
+1. **Pick a provider** — 16 presets or enter a custom URL
+2. **Paste your API key** — load the provider's live model list
+3. **Test the connection** — sends a real tiny message to verify
 4. **Apply** — to Claude Code, Claude Desktop, or both
-5. **Switch back** — one click restores official Anthropic for either app
+5. **Switch back** — one click restores official Anthropic
 
 ### How it works
 
-- **Claude Code** reads custom providers from environment variables in `~/.claude/settings.json` (`ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_MODEL`, `ANTHROPIC_SMALL_FAST_MODEL`). OpenClaude merges them in safely with an automatic backup before every change.
-- **Claude Desktop** has a built-in Gateway mode (Developer → Configure Third-Party Inference). All of its third-party state lives in a separate data dir with a `-3p` suffix (`~/Library/Application Support/Claude-3p` on macOS, `%LOCALAPPDATA%\Claude-3p` on Windows):
-  - `configLibrary/<uuid>.json` + `_meta.json` (`appliedId` selects the active config) with keys `inferenceProvider: "gateway"`, `inferenceGatewayBaseUrl`, `inferenceGatewayApiKey`, `inferenceGatewayAuthScheme`, `inferenceModels`
-  - `claude_desktop_config.json` → `"deploymentMode": "3p"` — without this flag the app stays in Claude-account mode and silently ignores the gateway config
-
-  OpenClaude writes the same format the official UI does — no admin rights needed. After applying, fully quit and reopen Claude Desktop.
-
-> ⚠️ **Claude Desktop limitations**: gateway mode validates model IDs against the Anthropic catalog — only `claude-*` models are accepted (DeepSeek/GPT/Gemini models work with Claude Code only). The `configLibrary` format is an internal mechanism (verified against Claude Desktop 1.11847.5); an app update could change it, and an MDM-managed enterprise config always takes precedence.
+- **Claude Code** reads custom providers from environment variables in `~/.claude/settings.json`. OpenClaude merges them in safely with automatic backup.
+- **Claude Desktop** uses the built-in Gateway mode. OpenClaude writes the same config format the official UI does. After applying, quit and reopen Claude Desktop.
+- **Non-Claude models** on Claude Desktop run through OpenClaude's background proxy with Anthropic ↔ OpenAI protocol translation. Real model names appear in Claude Desktop's own model picker.
 
 ## Development
 
@@ -32,18 +47,22 @@ npm install
 npm start
 ```
 
-## Building installers
+## Building
 
 ```bash
-npm run dist:mac     # .dmg + .zip          (build on macOS)
-npm run dist:win     # NSIS installer + portable .exe   (build on Windows or via CI)
-npm run dist:linux   # AppImage + .deb      (build on Linux or via CI)
+npm run dist:mac     # .dmg + .zip
+npm run dist:win     # NSIS installer + portable .exe
+npm run dist:linux   # AppImage + .deb
 ```
 
-Cross-platform note: electron-builder builds best on the target OS. The easiest way to ship all three is GitHub Actions with a matrix of `macos-latest`, `windows-latest`, `ubuntu-latest`.
+Cross-platform CI builds run via GitHub Actions on tag push.
 
 ## Safety
 
-- Your API key is written only to `~/.claude/settings.json` on your own machine — never sent anywhere except your chosen provider.
-- A timestamped backup (`settings.json.openclaude-backup-…`) is created before every change.
-- "Switch back to official Anthropic" removes only the four keys OpenClaude manages; the rest of your settings are untouched.
+- Your API key is written only to config files on your own machine — never sent anywhere except your chosen provider.
+- A timestamped backup is created before every change.
+- "Reset" removes only the keys OpenClaude manages; the rest of your settings are untouched.
+
+## License
+
+MIT
