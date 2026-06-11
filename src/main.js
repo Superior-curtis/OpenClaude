@@ -862,6 +862,7 @@ ipcMain.handle('config:get', () => {
 });
 
 ipcMain.handle('config:apply', (_evt, cfg) => {
+  cfg.apiKey = resolveApiKey(cfg.apiKey);
   const settings = readSettings();
   settings.env = settings.env || {};
   if (cfg.protocol === 'openai') {
@@ -905,6 +906,7 @@ ipcMain.handle('desktop:get', () => ({
 }));
 
 ipcMain.handle('desktop:apply', (_evt, cfg) => {
+  cfg.apiKey = resolveApiKey(cfg.apiKey);
   try {
     if (cfg.viaProxy) {
       // Point Claude Desktop at the local proxy and route real provider models
@@ -1001,13 +1003,20 @@ ipcMain.handle('config:restore', () => {
   return { ok: true };
 });
 
+// Helper: resolve API key (may be stored Copilot token)
+function resolveApiKey(key) {
+  if (key === '__copilot_token__') return readCopilotToken() || key;
+  return key;
+}
+
 // Fetch model list from the provider (done in main process: no CORS).
 ipcMain.handle('provider:models', async (_evt, { baseUrl, apiKey, modelsPath }) => {
+  const key = resolveApiKey(apiKey);
   try {
     const base = baseUrl.replace(/\/+$/, '');
     const url = modelsPath ? `${base}${modelsPath}` : `${base}/v1/models`;
     const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${apiKey}`, 'x-api-key': apiKey, 'x-goog-api-key': apiKey }
+      headers: { Authorization: `Bearer ${key}`, 'x-api-key': key, 'x-goog-api-key': key }
     });
     if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
     const data = await res.json();
@@ -1024,12 +1033,13 @@ ipcMain.handle('provider:models', async (_evt, { baseUrl, apiKey, modelsPath }) 
 
 // Send a tiny real message to verify key + endpoint end-to-end.
 ipcMain.handle('provider:test', async (_evt, { baseUrl, apiKey, model, protocol, chatPath }) => {
+  const key = resolveApiKey(apiKey);
   try {
     const base = baseUrl.replace(/\/+$/, '');
     const headers = {
       'content-type': 'application/json',
-      'x-api-key': apiKey,
-      Authorization: `Bearer ${apiKey}`,
+      'x-api-key': key,
+      Authorization: `Bearer ${key}`,
       'anthropic-version': '2023-06-01'
     };
     let res, reply;
@@ -1066,6 +1076,79 @@ ipcMain.handle('provider:test', async (_evt, { baseUrl, apiKey, model, protocol,
   } catch (err) {
     return { ok: false, error: err.message };
   }
+});
+
+// ── GitHub Copilot device auth ─────────────────────────────────
+const COPILOT_CLIENT_ID = 'Iv1.b507a08c87ecfe98';
+const COPILOT_TOKEN_PATH = () => path.join(app.getPath('userData'), 'copilot-token.json');
+
+let copilotDeviceCode = null;
+let copilotPollInterval = null;
+
+function readCopilotToken() {
+  try { return JSON.parse(fs.readFileSync(COPILOT_TOKEN_PATH(), 'utf8')).token || null; }
+  catch { return null; }
+}
+
+function writeCopilotToken(token) {
+  try { fs.mkdirSync(path.dirname(COPILOT_TOKEN_PATH()), { recursive: true }); } catch {}
+  fs.writeFileSync(COPILOT_TOKEN_PATH(), JSON.stringify({ token }), 'utf8');
+}
+
+function clearCopilotToken() {
+  try { fs.unlinkSync(COPILOT_TOKEN_PATH()); } catch {}
+}
+
+ipcMain.handle('copilot:auth-start', async () => {
+  try {
+    const res = await fetch('https://github.com/login/device/code', {
+      method: 'POST',
+      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ client_id: COPILOT_CLIENT_ID, scope: 'user:email' })
+    });
+    const data = await res.json();
+    if (!data.device_code) return { ok: false, error: data.error_description || 'Failed to start device auth' };
+    copilotDeviceCode = data.device_code;
+    copilotPollInterval = data.interval || 5;
+    return { ok: true, verification_uri: data.verification_uri, user_code: data.user_code };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('copilot:auth-poll', async () => {
+  if (!copilotDeviceCode) return { ok: false, error: 'No pending auth. Start device auth first.' };
+  try {
+    const res = await fetch('https://github.com/login/oauth/access_token', {
+      method: 'POST',
+      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        client_id: COPILOT_CLIENT_ID,
+        device_code: copilotDeviceCode,
+        grant_type: 'urn:ietf:params:oauth:grant-type:device_code'
+      })
+    });
+    const data = await res.json();
+    if (data.access_token) {
+      writeCopilotToken(data.access_token);
+      copilotDeviceCode = null;
+      return { ok: true, done: true };
+    }
+    if (data.error === 'authorization_pending') return { ok: true, done: false };
+    return { ok: false, error: data.error_description || data.error || 'Auth failed' };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('copilot:auth-status', () => ({
+  hasToken: Boolean(readCopilotToken())
+}));
+
+ipcMain.handle('copilot:auth-clear', () => {
+  copilotDeviceCode = null;
+  clearCopilotToken();
+  return { ok: true };
 });
 
 app.whenReady().then(() => {

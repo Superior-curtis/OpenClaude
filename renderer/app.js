@@ -35,12 +35,17 @@ const PROVIDERS = [
     keyHint: 'Your Fireworks key (fireworks.ai). Via local proxy.' },
   { id: 'cerebras', name: 'Cerebras', desc: 'Llama 4 · fastest', baseUrl: 'https://api.cerebras.ai', protocol: 'openai', modelsPath: '/v1/models', chatPath: '/v1/chat/completions',
     keyHint: 'Your Cerebras key (cloud.cerebras.ai). Via local proxy.' },
-
   // --- Specialized ---
-  { id: 'perplexity', name: 'Perplexity', desc: 'Search-grounded', baseUrl: 'https://api.perplexity.ai', protocol: 'openai', modelsPath: null, chatPath: '/chat/completions',
+  { id: 'perplexity', name: 'Perplexity',
+    desc: 'Search-grounded',
+    baseUrl: 'https://api.perplexity.ai', protocol: 'openai', modelsPath: null, chatPath: '/chat/completions',
     staticModels: ['sonar-pro', 'sonar', 'sonar-reasoning-pro', 'sonar-reasoning', 'sonar-deep-research'],
     keyHint: 'Your Perplexity key (perplexity.ai/settings). Curated model list — no models endpoint.' },
-
+  { id: 'copilot', name: 'GitHub Copilot',
+    desc: 'Device auth · GPT-5, Claude…',
+    baseUrl: 'https://api.github.com/copilot', protocol: 'openai', modelsPath: '/models', chatPath: '/chat/completions',
+    auth: 'device',
+    keyHint: 'Uses GitHub device auth. Click "Login with GitHub" — no API key needed.' },
   // --- Regional ---
   { id: 'zai', name: 'Z.AI', desc: 'GLM models', baseUrl: 'https://api.z.ai/api/anthropic', protocol: 'anthropic', modelsPath: '/v1/models', staticModels: ['glm-4.6', 'glm-4.5', 'glm-4.5-air', 'glm-4.5-flash'],
     keyHint: 'Your Z.AI key (z.ai developer console). Anthropic-protocol endpoint.' },
@@ -64,7 +69,7 @@ function currentModelsPath() { return isCustom() ? '/v1/models' : (selectedProvi
 function providerCfg() {
   const cfg = {
     baseUrl: currentBaseUrl(),
-    apiKey: $('apiKey').value.trim(),
+    apiKey: selectedProvider.auth === 'device' ? '__copilot_token__' : $('apiKey').value.trim(),
     protocol: currentProtocol(),
     chatPath: currentChatPath(),
   };
@@ -87,6 +92,7 @@ function validate() {
   const cfg = providerCfg();
   if (!cfg.baseUrl) { showResult(false, 'Choose a provider or enter a base URL.'); return null; }
   if (!/^https?:\/\//.test(cfg.baseUrl)) { showResult(false, 'The base URL must start with https://'); return null; }
+  if (selectedProvider.auth === 'device') return cfg; // Copilot: no API key field
   if (!cfg.apiKey) { showResult(false, 'Enter your API key.'); return null; }
   return cfg;
 }
@@ -103,8 +109,16 @@ function renderProviders() {
     btn.innerHTML = `${proto}<div class="pn">${p.name}</div><div class="pd">${p.desc}</div>`;
     btn.addEventListener('click', () => {
       selectedProvider = p;
+      loadedModels = [];
       $('customRow').classList.toggle('hidden', p.id !== 'custom');
+      const isCopilot = p.auth === 'device';
+      $('apiKeyRow').classList.toggle('hidden', isCopilot);
+      $('copilotAuthRow').classList.toggle('hidden', !isCopilot);
+      $('desktopModelsWrap').classList.add('hidden');
+      $('modelSelect').innerHTML = '<option value="">Provider default</option>';
+      $('fastModelSelect').innerHTML = '<option value="">Provider default</option>';
       renderProviders();
+      hideResult();
     });
     grid.appendChild(btn);
   }
@@ -150,6 +164,7 @@ function checkedDesktopModels() {
 }
 
 async function loadModels() {
+  if (selectedProvider.auth === 'device') { await copilotLoadModels(); return; }
   const cfg = validate();
   if (!cfg) return;
 
@@ -385,6 +400,70 @@ async function uninstallApp() {
   }
 }
 
+// ── Copilot device auth ────────────────────────────────────────
+async function copilotLogin() {
+  setBusy(true);
+  const res = await window.openclaude.copilotAuthStart();
+  setBusy(false);
+  if (!res.ok) { showResult(false, `Auth failed: ${res.error}`); return; }
+  $('copilotStatus').textContent = `Open ${res.verification_uri} and enter code: ${res.user_code}`;
+  $('copilotLoginBtn').classList.add('hidden');
+  // Poll for token
+  const poll = async () => {
+    const p = await window.openclaude.copilotAuthPoll();
+    if (p.ok && p.done) {
+      $('copilotStatus').textContent = 'Logged in to GitHub Copilot.';
+      $('copilotLogoutBtn').classList.remove('hidden');
+      $('copilotLoginBtn').classList.add('hidden');
+      setBusy(false);
+      return;
+    }
+    if (!p.ok) {
+      $('copilotStatus').textContent = `Auth failed: ${p.error}`;
+      $('copilotLoginBtn').classList.remove('hidden');
+      setBusy(false);
+      return;
+    }
+    setTimeout(poll, 3000);
+  };
+  setTimeout(poll, 2000);
+}
+
+async function copilotLogout() {
+  await window.openclaude.copilotAuthClear();
+  $('copilotStatus').textContent = '';
+  $('copilotLoginBtn').classList.remove('hidden');
+  $('copilotLogoutBtn').classList.add('hidden');
+}
+
+async function copilotLoadModels() {
+  const status = await window.openclaude.copilotAuthStatus();
+  if (!status.hasToken) { showResult(false, 'Login with GitHub first.'); return; }
+  const cfg = {
+    baseUrl: selectedProvider.baseUrl,
+    apiKey: '__copilot_token__', // main.js knows to use stored token
+    protocol: 'openai',
+    chatPath: '/chat/completions',
+    modelsPath: '/models'
+  };
+  setBusy(true);
+  showResult(true, 'Loading models…');
+  const res = await window.openclaude.fetchModels(cfg);
+  setBusy(false);
+  let models = res.ok ? res.models : [];
+  models = models.filter((m) => !NON_CHAT.test(m));
+  models.sort();
+  if (models.length === 0) {
+    showResult(false, 'No models returned.');
+    return;
+  }
+  loadedModels = models;
+  fillSelect($('modelSelect'), models, ['gpt-5', 'claude-sonnet-4-5', 'gemini-3-flash']);
+  fillSelect($('fastModelSelect'), models, ['gpt-5-nano', 'claude-haiku-4-5']);
+  renderDesktopChecks(models);
+  showResult(true, `Loaded ${models.length} models.`);
+}
+
 // --- Wire up -----------------------------------------------------------------
 
 $('toggleKey').addEventListener('click', () => {
@@ -397,7 +476,21 @@ $('restoreBtn').addEventListener('click', restoreCode);
 $('applyDesktopBtn').addEventListener('click', applyDesktop);
 $('restoreDesktopBtn').addEventListener('click', restoreDesktop);
 $('uninstallBtn').addEventListener('click', uninstallApp);
+$('copilotLoginBtn').addEventListener('click', copilotLogin);
+$('copilotLogoutBtn').addEventListener('click', copilotLogout);
+$('loadModelsBtn2').addEventListener('click', copilotLoadModels);
 
 renderProviders();
 detectInstall();
+
+// Check Copilot auth status on startup
+(async () => {
+  const s = await window.openclaude.copilotAuthStatus();
+  if (s.hasToken) {
+    $('copilotStatus').textContent = 'Logged in to GitHub Copilot.';
+    $('copilotLoginBtn').classList.add('hidden');
+    $('copilotLogoutBtn').classList.remove('hidden');
+  }
+})();
+
 refreshStatus();

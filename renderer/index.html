@@ -38,10 +38,18 @@
 
       <section class="card">
         <div class="card-head"><span class="step">2</span><h2>API key</h2></div>
-        <div class="key-row">
-          <input id="apiKey" type="password" placeholder="Paste your key…" spellcheck="false" autocomplete="off" />
+        <div id="apiKeyRow" class="key-row">
+          <input id="apiKey" type="password" placeholder="Paste your API key…" spellcheck="false" autocomplete="off" />
           <button id="toggleKey" class="icon-btn" title="Show / hide">👁</button>
           <button id="loadModelsBtn" class="btn btn-soft">Load models</button>
+        </div>
+        <div id="copilotAuthRow" class="hidden">
+          <div class="key-row">
+            <button id="copilotLoginBtn" class="btn btn-primary">Login with GitHub</button>
+            <button id="copilotLogoutBtn" class="btn btn-ghost-danger hidden">Logout</button>
+            <button id="loadModelsBtn2" class="btn btn-soft">Load models</button>
+          </div>
+          <p id="copilotStatus" class="hint"></p>
         </div>
       </section>
 

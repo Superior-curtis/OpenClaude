@@ -42,7 +42,7 @@ OpenClaude is a desktop app that configures Claude Code and Claude Desktop to ta
 
 **[All downloads →](https://github.com/Superior-curtis/OpenClaude/releases/latest)**
 
-> macOS shows a warning on first launch because the app is not signed with a paid Apple Developer certificate. Right-click → Open to bypass. Same for Windows SmartScreen — click "More info" → "Run anyway". This is standard for open-source apps.
+> **Why the warning?** Apple requires a paid developer certificate ($99/year) to remove the Gatekeeper warning. Microsoft requires an EV code signing certificate ($300-500/year) for SmartScreen. These fees are not practical for an open-source project — the source code is public and auditable. The app is safe: it never sends your data anywhere except the provider you choose.
 
 ## Quick start
 
@@ -55,7 +55,7 @@ Switch back to official Anthropic anytime — one click on Reset. Full walkthrou
 
 ## Providers
 
-OpenRouter · OpenAI · Anthropic · Google Gemini · xAI Grok · DeepSeek · Mistral AI · Groq · Together AI · Fireworks AI · Cerebras · Perplexity · Z.AI · NVIDIA NIM · OpenCode Go · OpenCode Zen · Custom
+OpenRouter · OpenAI · Anthropic · Google Gemini · GitHub Copilot · xAI Grok · DeepSeek · Mistral AI · Groq · Together AI · Fireworks AI · Cerebras · Perplexity · Z.AI · NVIDIA NIM · OpenCode Go · OpenCode Zen · Custom
 
 ## Develop
 

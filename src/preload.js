@@ -3,6 +3,10 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('openclaude', {
   detectInstall: () => ipcRenderer.invoke('claude:detect'),
   browseDesktop: () => ipcRenderer.invoke('claude:browse-desktop'),
+  copilotAuthStart: () => ipcRenderer.invoke('copilot:auth-start'),
+  copilotAuthPoll: () => ipcRenderer.invoke('copilot:auth-poll'),
+  copilotAuthStatus: () => ipcRenderer.invoke('copilot:auth-status'),
+  copilotAuthClear: () => ipcRenderer.invoke('copilot:auth-clear'),
   getConfig: () => ipcRenderer.invoke('config:get'),
   applyConfig: (cfg) => ipcRenderer.invoke('config:apply', cfg),
   restoreOfficial: () => ipcRenderer.invoke('config:restore'),
