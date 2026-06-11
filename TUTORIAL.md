@@ -52,20 +52,115 @@ Click **Reset** next to either Claude Code or Claude Desktop. One click. Your ba
 
 ## Provider-specific notes
 
+### OpenCode Go
+**How to get a key:** Get your key at [opencode.ai/zen](https://opencode.ai/zen). Same key as OpenCode Zen — needs an active OpenCode Go subscription ($10/mo).  
+**Endpoint:** `https://opencode.ai/zen/go` (Anthropic protocol).  
+**Models:** GLM, Kimi, DeepSeek, and more — loaded automatically.  
+**Proxy:** No — native Anthropic protocol.
+
+### OpenCode Zen
+**How to get a key:** Register at [opencode.ai/zen](https://opencode.ai/zen), top up balance. Free models end in `-free`.  
+**Endpoint:** `https://opencode.ai/zen` (Anthropic protocol).  
+**Models:** Claude, GPT, Gemini, and more — loaded automatically.  
+**Proxy:** No — native Anthropic protocol.
+
 ### OpenRouter
-Create a key at [openrouter.ai/keys](https://openrouter.ai/keys). Many models are free. Model IDs include the provider prefix (e.g. `openai/gpt-5`, `anthropic/claude-sonnet-4-5`).
+**How to get a key:** Create a key at [openrouter.ai/keys](https://openrouter.ai/keys). Pay-per-token, many free models available.  
+**Endpoint:** `https://openrouter.ai/api/v1` (OpenAI protocol).  
+**Models:** 280+ — loaded automatically. Model IDs include the provider prefix (e.g. `openai/gpt-5`, `anthropic/claude-sonnet-4-5`).  
+**Proxy:** Yes — runs through local proxy.
+
+### Anthropic
+**How to get a key:** Get an API key at [console.anthropic.com](https://console.anthropic.com).  
+**Endpoint:** `https://api.anthropic.com` (Anthropic protocol).  
+**Models:** Claude models — loaded automatically.  
+**Proxy:** No — native Anthropic protocol.
+
+### OpenAI
+**How to get a key:** Create a key at [platform.openai.com/api-keys](https://platform.openai.com/api-keys) (`sk-...`).  
+**Endpoint:** `https://api.openai.com/v1` (OpenAI protocol).  
+**Models:** GPT-5, o-series, GPT-4o — loaded automatically.  
+**Proxy:** Yes — runs through local proxy.
 
 ### Google Gemini
-Use a free [AI Studio](https://aistudio.google.com) key (`AIza...`). The endpoint is rate-limited but free.
+**How to get a key:** Get a free API key at [aistudio.google.com](https://aistudio.google.com) (`AIza...`).  
+**Endpoint:** `https://generativelanguage.googleapis.com/v1beta/openai` (OpenAI protocol).  
+**Models:** Gemini 2.x / 3.x — loaded automatically.  
+**Proxy:** Yes — runs through local proxy.  
+**Note:** Rate-limited but free.
 
-### NVIDIA NIM
-Key from [build.nvidia.com](https://build.nvidia.com) (`nvapi-...`). Non-chat models (embeddings, rerankers, biology, speech, image generation) are automatically filtered out.
+### GitHub Copilot
+**How to get a key:** No API key needed — uses GitHub device auth. Click **Login with GitHub** in OpenClaude.  
+**Endpoint:** `https://api.github.com/copilot` (OpenAI protocol).  
+**Models:** GPT-5, Claude, and more — loaded automatically.  
+**Proxy:** Yes — runs through local proxy.
+
+### xAI Grok
+**How to get a key:** Get a key at [console.x.ai](https://console.x.ai) (`xai-...`).  
+**Endpoint:** `https://api.x.ai` (OpenAI protocol).  
+**Models:** Grok 4, Grok 3, Grok 2 — loaded automatically. Vision models filtered.  
+**Proxy:** Yes — runs through local proxy.
+
+### DeepSeek
+**How to get a key:** Get a key at [platform.deepseek.com](https://platform.deepseek.com).  
+**Endpoint:** `https://api.deepseek.com/anthropic` (Anthropic protocol).  
+**Models:** DeepSeek-V3, DeepSeek-R1 — loaded automatically.  
+**Proxy:** No — native Anthropic protocol.
+
+### Mistral AI
+**How to get a key:** Get a key at [console.mistral.ai](https://console.mistral.ai).  
+**Endpoint:** `https://api.mistral.ai` (OpenAI protocol).  
+**Models:** Mistral Large, Codestral, Ministral — loaded automatically. Embedding/OCR models filtered.  
+**Proxy:** Yes — runs through local proxy.
+
+### Groq
+**How to get a key:** Get a key at [console.groq.com](https://console.groq.com). Free tier available.  
+**Endpoint:** `https://api.groq.com/openai` (OpenAI protocol).  
+**Models:** Ultra-fast LPU inference — loaded automatically. Audio models filtered.  
+**Proxy:** Yes — runs through local proxy.
+
+### Together AI
+**How to get a key:** Get a key at [api.together.ai](https://api.together.ai).  
+**Endpoint:** `https://api.together.xyz` (OpenAI protocol).  
+**Models:** 200+ open models — loaded automatically. Non-chat models filtered.  
+**Proxy:** Yes — runs through local proxy.
+
+### Fireworks AI
+**How to get a key:** Get a key at [fireworks.ai](https://fireworks.ai).  
+**Endpoint:** `https://api.fireworks.ai/inference` (OpenAI protocol).  
+**Models:** Fast serverless inference — loaded automatically. Vision/image models filtered.  
+**Proxy:** Yes — runs through local proxy.
+
+### Cerebras
+**How to get a key:** Get a key at [cloud.cerebras.ai](https://cloud.cerebras.ai).  
+**Endpoint:** `https://api.cerebras.ai` (OpenAI protocol).  
+**Models:** Llama 4 and more — loaded automatically.  
+**Proxy:** Yes — runs through local proxy.
 
 ### Perplexity
-No public models endpoint. A curated list is provided: Sonar Pro, Sonar, Sonar Reasoning, Sonar Deep Research.
+**How to get a key:** Get a key at [perplexity.ai/settings](https://perplexity.ai/settings).  
+**Endpoint:** `https://api.perplexity.ai` (OpenAI protocol).  
+**Models:** No public models endpoint. Curated list provided: Sonar Pro, Sonar, Sonar Reasoning, Sonar Deep Research. Pick from the dropdown.  
+**Proxy:** Yes — runs through local proxy.
+
+### Z.AI (智谱)
+**How to get a key:** Get a key at [open.bigmodel.cn](https://open.bigmodel.cn).  
+**Endpoint:** `https://api.z.ai/api/anthropic` (Anthropic protocol).  
+**Models:** GLM-4.6, GLM-4.5, GLM-4.5-Air, GLM-4.5-Flash — loaded automatically.  
+**Proxy:** No — native Anthropic protocol.
+
+### NVIDIA NIM
+**How to get a key:** Get a key at [build.nvidia.com](https://build.nvidia.com) (`nvapi-...`).  
+**Endpoint:** `https://integrate.api.nvidia.com` (OpenAI protocol).  
+**Models:** Llama, Nemotron — loaded automatically. Non-chat models (embeddings, rerankers, biology, speech, image generation) are automatically filtered.  
+**Proxy:** Yes — runs through local proxy.
 
 ### Custom provider
-Enter any OpenAI or Anthropic-compatible base URL. Works with Ollama (`http://localhost:11434/v1`, protocol: OpenAI), vLLM, LiteLLM, and any self-hosted inference server.
+**How to get a key:** Varies by provider.  
+**Endpoint:** Enter any OpenAI or Anthropic-compatible base URL.  
+**Protocol:** Pick OpenAI or Anthropic.  
+**Examples:** Works with Ollama (`http://localhost:11434/v1`, protocol: OpenAI), vLLM, LiteLLM, and any self-hosted inference server.  
+**Proxy:** Yes (OpenAI protocol) / No (Anthropic protocol) — detected automatically.
 
 ---
 

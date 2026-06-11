@@ -13,6 +13,7 @@
 <p align="center">
   <a href="https://github.com/Superior-curtis/OpenClaude/releases/latest"><img src="https://img.shields.io/github/v/release/Superior-curtis/OpenClaude?label=download&color=orange" alt="Download"></a>
   <a href="https://github.com/Superior-curtis/OpenClaude/blob/main/TUTORIAL.md"><img src="https://img.shields.io/badge/docs-tutorial-blue" alt="Tutorial"></a>
+  <a href="https://youtu.be/9q-l-EwG6jY"><img src="https://img.shields.io/badge/watch-macOS%20tutorial-red?logo=youtube" alt="macOS Tutorial"></a>
   <img src="https://img.shields.io/badge/platforms-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey" alt="Platforms">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
 </p>
@@ -51,7 +52,7 @@ OpenClaude is a desktop app that configures Claude Code and Claude Desktop to ta
 3. **Pick models** for main and fast tasks
 4. **Click Apply** for Claude Code, Claude Desktop, or both
 
-> **First time?** Read the **[full setup tutorial →](TUTORIAL.md)** for step-by-step instructions with screenshots.
+> **First time?** Read the **[full setup tutorial →](TUTORIAL.md)** or watch the **[macOS video guide →](https://youtu.be/9q-l-EwG6jY)**
 
 Switch back to official Anthropic anytime — one click on Reset.
 
