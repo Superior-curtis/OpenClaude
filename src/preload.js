@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('openclaude', {
   getDesktopConfig: () => ipcRenderer.invoke('desktop:get'),
   applyDesktopConfig: (cfg) => ipcRenderer.invoke('desktop:apply', cfg),
   restoreDesktopConfig: () => ipcRenderer.invoke('desktop:restore'),
+  uninstall: () => ipcRenderer.invoke('app:uninstall'),
   proxyStatus: () => ipcRenderer.invoke('proxy:status'),
   fetchModels: (args) => ipcRenderer.invoke('provider:models', args),
   testConnection: (args) => ipcRenderer.invoke('provider:test', args)

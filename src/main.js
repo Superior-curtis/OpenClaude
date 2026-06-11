@@ -953,6 +953,42 @@ ipcMain.handle('desktop:restore', () => {
   }
 });
 
+// ── Uninstall: reset both apps, remove proxy + login item ──
+ipcMain.handle('app:uninstall', () => {
+  try {
+    // 1. Restore Claude Code
+    const settings = readSettings();
+    if (settings.env) {
+      for (const key of MANAGED_KEYS) delete settings.env[key];
+      if (Object.keys(settings.env).length === 0) delete settings.env;
+    }
+    writeSettings(settings);
+
+    // 2. Restore Claude Desktop
+    restoreDesktopConfig();
+
+    // 3. Stop proxy + disable
+    stopProxy();
+    const pcfg = readProxyConfig();
+    writeProxyConfig({ enabled: false });
+
+    // 4. Remove login item
+    app.setLoginItemSettings({ openAtLogin: false });
+
+    // 5. Remove proxy config file
+    try { fs.unlinkSync(PROXY_CONFIG_PATH()); } catch {}
+
+    return {
+      ok: true,
+      platform: process.platform,
+      claudeCodeSettings: SETTINGS_PATH,
+      claudeDesktopData: desktop3pDataDir()
+    };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
 ipcMain.handle('proxy:status', () => proxyStatus());
 
 ipcMain.handle('config:restore', () => {

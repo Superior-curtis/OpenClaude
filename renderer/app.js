@@ -363,8 +363,26 @@ async function restoreDesktop() {
   setBusy(true);
   const res = await window.openclaude.restoreDesktopConfig();
   setBusy(false);
-  if (res.ok) { showResult(true, '✓ Claude Desktop reset to official Anthropic. Quit and reopen it.'); refreshStatus(); }
+  if (res.ok) { showResult(true, 'Claude Desktop reset to official Anthropic. Quit and reopen it.'); refreshStatus(); }
   else showResult(false, res.error);
+}
+
+async function uninstallApp() {
+  if (!confirm('This will restore Claude Code and Claude Desktop to official Anthropic and remove OpenClaude\'s configuration.\n\nContinue?')) return;
+  setBusy(true);
+  const res = await window.openclaude.uninstall();
+  setBusy(false);
+  if (res.ok) {
+    const cleanupMsg = res.platform === 'darwin'
+      ? 'All settings restored. Drag OpenClaude from /Applications to the Trash to finish.'
+      : res.platform === 'win32'
+        ? 'All settings restored. Use "Add or Remove Programs" in Windows Settings to uninstall OpenClaude.'
+        : 'All settings restored. Remove the OpenClaude AppImage/deb to finish.';
+    showResult(true, 'Cleanup complete. ' + cleanupMsg);
+    refreshStatus();
+  } else {
+    showResult(false, `Cleanup failed: ${res.error}`);
+  }
 }
 
 // --- Wire up -----------------------------------------------------------------
@@ -378,6 +396,7 @@ $('applyBtn').addEventListener('click', applyConfig);
 $('restoreBtn').addEventListener('click', restoreCode);
 $('applyDesktopBtn').addEventListener('click', applyDesktop);
 $('restoreDesktopBtn').addEventListener('click', restoreDesktop);
+$('uninstallBtn').addEventListener('click', uninstallApp);
 
 renderProviders();
 detectInstall();

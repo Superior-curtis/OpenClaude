@@ -34,13 +34,15 @@
         { "target": "dmg", "arch": ["x64", "arm64"] },
         { "target": "zip", "arch": ["x64", "arm64"] }
       ],
-      "icon": "build/icon.icns"
+      "icon": "build/icon.icns",
+      "artifactName": "OpenClaude-${version}-${arch}.${ext}"
     },
     "win": {
       "target": [
         { "target": "nsis", "arch": ["x64", "ia32"] }
       ],
-      "icon": "build/icon.ico"
+      "icon": "build/icon.ico",
+      "artifactName": "OpenClaude-Setup-${version}-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -48,7 +50,9 @@
       "allowToChangeInstallationDirectory": false,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "OpenClaude"
+      "shortcutName": "OpenClaude",
+      "uninstallDisplayName": "OpenClaude",
+      "deleteAppDataOnUninstall": false
     },
     "linux": {
       "target": [
