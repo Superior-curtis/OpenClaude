@@ -1016,14 +1016,21 @@ ipcMain.handle('provider:models', async (_evt, { baseUrl, apiKey, modelsPath }) 
     const base = baseUrl.replace(/\/+$/, '');
     const url = modelsPath ? `${base}${modelsPath}` : `${base}/v1/models`;
     const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${key}`, 'x-api-key': key, 'x-goog-api-key': key }
+      headers: {
+        Authorization: `Bearer ${key}`,
+        'x-api-key': key,
+        'x-goog-api-key': key,
+        Accept: 'application/json',
+        'User-Agent': 'OpenClaude/0.1.6'
+      }
     });
     if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
     const data = await res.json();
     // OpenAI/Anthropic shape: {data:[{id}]}. Gemini native: {models:[{name}]}.
+    // Copilot: {data:[{id}]} or {models:[{id}]}
     const list = data.data || data.models || [];
     const models = list
-      .map((m) => (m.id || m.name || '').replace(/^models\//, ''))
+      .map((m) => (m.id || m.name || m.slug || '').replace(/^models\//, ''))
       .filter(Boolean);
     return { ok: true, models };
   } catch (err) {
@@ -1104,7 +1111,7 @@ ipcMain.handle('copilot:auth-start', async () => {
     const res = await fetch('https://github.com/login/device/code', {
       method: 'POST',
       headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ client_id: COPILOT_CLIENT_ID, scope: 'user:email' })
+      body: JSON.stringify({ client_id: COPILOT_CLIENT_ID, scope: 'read:user' })
     });
     const data = await res.json();
     if (!data.device_code) return { ok: false, error: data.error_description || 'Failed to start device auth' };

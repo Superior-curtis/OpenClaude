@@ -30,6 +30,8 @@ OpenClaude is a desktop app that configures Claude Code and Claude Desktop to ta
 - **Model name routing** — shows real model names in Claude Desktop's model picker by working around its Claude-only validation
 - **Auto-detection** — scans your system for Claude installations on startup
 
+> **Requirements:** [Claude Desktop](https://claude.ai/download) or [Claude Code](https://docs.anthropic.com/en/docs/claude-code) must be installed. OpenClaude configures them — it does not replace them.
+
 ## Download
 
 | Platform | Download |

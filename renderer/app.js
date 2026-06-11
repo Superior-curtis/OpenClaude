@@ -416,6 +416,7 @@ async function copilotLogin() {
       $('copilotLogoutBtn').classList.remove('hidden');
       $('copilotLoginBtn').classList.add('hidden');
       setBusy(false);
+      copilotLoadModels();
       return;
     }
     if (!p.ok) {
@@ -451,6 +452,7 @@ async function copilotLoadModels() {
   showResult(true, 'Loading models…');
   const res = await window.openclaude.fetchModels(cfg);
   setBusy(false);
+  if (!res.ok) { showResult(false, `Copilot error: ${res.error}`); return; }
   let models = res.ok ? res.models : [];
   models = models.filter((m) => !NON_CHAT.test(m));
   models.sort();
