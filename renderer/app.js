@@ -1,7 +1,7 @@
 // ── Non-chat model filter ──────────────────────────────────────────
 // Models that are NOT chat/completions — embeddings, rerankers, speech,
 // vision-only, image/video gen, biology, etc. Applied to all providers.
-const NON_CHAT = /embed|rerank|retriev|reranking|\bocr\b|paddleocr|parakeet|canary|riva|\basr\b|\btts\b|\bstt\b|speech|codec|fastpitch|audio2face|maxine|nvclip|\bclip\b|dragon|table-structure|surya|deplot|\bsam[ -]?2?\b|segment|depth|\besm\b|diffdock|molmim|genmol|proteinmpnn|rfdiffusion|boltz|evo2|\bvad\b|imagen|\bveo\b|image-generation|text-to-image|stable-diffusion|sdxl|flux|cosmos|nemoretriever|aqa|guard|safety|content-safety|topic-control|jailbreak|nvidia/neva|nvidia/nemotron-mini|nvidia/nemotron-nano/i;
+const NON_CHAT = /embed|rerank|retriev|reranking|\bocr\b|paddleocr|parakeet|canary|riva|\basr\b|\btts\b|\bstt\b|speech|codec|fastpitch|audio2face|maxine|nvclip|\bclip\b|dragon|table-structure|surya|deplot|\bsam[- ]?2?\b|segment|depth|\besm\b|diffdock|molmim|genmol|proteinmpnn|rfdiffusion|boltz|evo2|\bvad\b|imagen|\bveo\b|image-generation|text-to-image|stable-diffusion|sdxl|flux|cosmos|nemoretriever|aqa|guard|safety|content-safety|topic-control|jailbreak|nvidia.neva|nvidia.nemotron.mini|nvidia.nemotron.nano/i;
 
 // ── Provider registry ─────────────────────────────────────────────
 const PROVIDERS = [
