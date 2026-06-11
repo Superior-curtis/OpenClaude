@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'" />
+  <title>OpenClaude</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">OC</div>
+      <div>
+        <div class="brand-name">OpenClaude</div>
+        <div class="brand-tag">Run Claude on any AI provider</div>
+      </div>
+    </div>
+    <div id="statusBadge" class="status-pill neutral">Checking&hellip;</div>
+  </header>
+
+  <main class="layout">
+    <div class="col-setup">
+      <!-- Step 1: Provider -->
+      <section class="card">
+        <div class="card-head"><span class="step">1</span><h2>Provider</h2></div>
+        <div id="providerGrid" class="provider-grid"></div>
+        <div id="customRow" class="stack hidden">
+          <label class="lbl">Base URL</label>
+          <input id="customUrl" type="url" placeholder="https://api.example.com" spellcheck="false" />
+          <label class="lbl">API protocol</label>
+          <select id="customProtocol">
+            <option value="anthropic">Anthropic &mdash; /v1/messages</option>
+            <option value="openai">OpenAI &mdash; /v1/chat/completions</option>
+          </select>
+          <label class="lbl">Chat path <span class="muted">(override)</span></label>
+          <input id="customChatPath" type="text" placeholder="/v1/chat/completions" spellcheck="false" />
+          <label class="lbl">Models path <span class="muted">(override)</span></label>
+          <input id="customModelsPath" type="text" placeholder="/v1/models" spellcheck="false" />
+        </div>
+        <p id="providerHint" class="hint"></p>
+      </section>
+
+      <!-- Step 2: API key -->
+      <section class="card">
+        <div class="card-head"><span class="step">2</span><h2>API key</h2></div>
+        <div class="key-row">
+          <input id="apiKey" type="password" placeholder="Paste your API key&hellip;" spellcheck="false" autocomplete="off" />
+          <button id="toggleKey" class="icon-btn" title="Show / hide">&#x1F441;</button>
+          <button id="loadModelsBtn" class="btn btn-soft">Load models</button>
+        </div>
+      </section>
+
+      <!-- Step 3: Models -->
+      <section class="card">
+        <div class="card-head"><span class="step">3</span><h2>Models</h2></div>
+        <div class="grid2">
+          <div class="stack">
+            <label class="lbl">Main model</label>
+            <select id="modelSelect"><option value="">Provider default</option></select>
+          </div>
+          <div class="stack">
+            <label class="lbl">Fast model <span class="muted">small tasks</span></label>
+            <select id="fastModelSelect"><option value="">Provider default</option></select>
+          </div>
+        </div>
+        <div id="desktopModelsWrap" class="stack hidden">
+          <label class="lbl">Claude Desktop model menu <span class="muted">pick up to 4 &mdash; switch inside the app</span></label>
+          <div id="desktopModels" class="model-checks"></div>
+        </div>
+      </section>
+
+      <!-- Step 4: Apply -->
+      <section class="card">
+        <div class="card-head"><span class="step">4</span><h2>Apply</h2></div>
+        <div class="targets">
+          <div class="target">
+            <div class="target-name">Claude Code <span class="muted">terminal</span></div>
+            <div class="row">
+              <button id="testBtn" class="btn btn-soft">Test connection</button>
+              <button id="applyBtn" class="btn btn-primary">Apply to Code</button>
+              <button id="restoreBtn" class="btn btn-ghost-danger">Reset</button>
+            </div>
+          </div>
+          <div class="target">
+            <div class="target-name">Claude Desktop <span class="muted">chat app</span></div>
+            <div class="row">
+              <button id="applyDesktopBtn" class="btn btn-primary">Apply to Desktop</button>
+              <button id="restoreDesktopBtn" class="btn btn-ghost-danger">Reset</button>
+            </div>
+          </div>
+        </div>
+        <p class="hint">Restart the target app after applying. Non-Claude models on Claude Desktop use the background proxy &mdash; keep OpenClaude running (tray icon). A timestamped backup is saved before every change.</p>
+      </section>
+
+      <div id="result" class="result hidden"></div>
+    </div>
+
+    <!-- Right: live status -->
+    <aside class="col-status">
+      <section class="card">
+        <div class="card-head"><h2>Live status</h2></div>
+        <div class="status-block">
+          <div class="status-title">Claude Code</div>
+          <div id="currentConfig" class="kv">Loading&hellip;</div>
+        </div>
+        <div class="status-block">
+          <div class="status-title">Claude Desktop</div>
+          <div id="currentDesktopConfig" class="kv">Loading&hellip;</div>
+        </div>
+        <div id="proxyBlock" class="status-block hidden">
+          <div class="status-title">Proxy</div>
+          <div id="proxyStatus" class="proxy-status stopped">&#x26AA; Proxy stopped</div>
+        </div>
+        <p class="hint">Claude Code file:<br><code id="settingsPath"></code></p>
+        <p class="hint">Your key stays on this machine. Sent only to the provider you choose.</p>
+      </section>
+    </aside>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
