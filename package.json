@@ -35,7 +35,9 @@
         { "target": "zip", "arch": ["x64", "arm64"] }
       ],
       "icon": "build/icon.icns",
-      "artifactName": "OpenClaude-${version}-${arch}.${ext}"
+      "artifactName": "OpenClaude-${version}-${arch}.${ext}",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false
     },
     "win": {
       "target": [
