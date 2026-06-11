@@ -45,14 +45,22 @@ OpenClaude is a desktop app that configures Claude Code and Claude Desktop to ta
 
 > **Why the warning?** Apple requires a paid developer certificate ($99/year) to remove the Gatekeeper warning. Microsoft requires an EV code signing certificate ($300-500/year) for SmartScreen. These fees are not practical for an open-source project — the source code is public and auditable. The app is safe: it never sends your data anywhere except the provider you choose. See [Troubleshooting](#troubleshooting) for workarounds.
 
+<div align="center">
+  <a href="TUTORIAL.md">
+    <img src="https://img.shields.io/badge/SETUP%20GUIDE-1f6feb?style=for-the-badge&labelColor=333" alt="Tutorial">
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://youtu.be/9q-l-EwG6jY">
+    <img src="https://img.shields.io/badge/WATCH%20MACOS%20SETUP-red?style=for-the-badge&labelColor=333&logo=youtube" alt="macOS Video">
+  </a>
+</div>
+
 ## Quick start
 
 1. **Pick a provider** from the 18 presets, or enter a custom URL
 2. **Paste your API key** and click Load models
 3. **Pick models** for main and fast tasks
 4. **Click Apply** for Claude Code, Claude Desktop, or both
-
-> **First time?** Read the **[full setup tutorial →](TUTORIAL.md)** or watch the **[macOS video guide →](https://youtu.be/9q-l-EwG6jY)**
 
 Switch back to official Anthropic anytime — one click on Reset.
 
