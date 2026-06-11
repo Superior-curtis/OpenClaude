@@ -8,16 +8,21 @@ on:
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: macos-latest
-            args: --mac
-          - os: macos-latest
+            arch: arm64
+            args: --mac --arm64
+          - os: macos-13
+            arch: x64
             args: --mac --x64
           - os: windows-latest
-            args: --win
+            arch: x64
+            args: --win --x64
           - os: ubuntu-latest
-            args: --linux
+            arch: x64
+            args: --linux --x64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -25,12 +30,15 @@ jobs:
         with:
           node-version: 22
       - run: npm ci
+      - name: Build Linux deps
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libfuse2
       - run: npx electron-builder ${{ matrix.args }} --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
       - uses: actions/upload-artifact@v4
         with:
-          name: openclaude-${{ matrix.os }}-${{ matrix.args }}
+          name: openclaude-${{ matrix.os }}-${{ matrix.arch }}
           path: |
             dist/*.dmg
             dist/*.zip
@@ -53,4 +61,4 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           files: artifacts/*
-          draft: true
+          draft: false
