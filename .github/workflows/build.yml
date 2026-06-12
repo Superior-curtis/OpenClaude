@@ -97,9 +97,63 @@ jobs:
           EOF
       - name: Copy TUTORIAL.md to release
         run: cp TUTORIAL.md artifacts/
+      - name: Generate release body
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PREV=$(git tag --sort=-version:refname | grep '^v' | head -2 | tail -1 || echo "")
+          cat > /tmp/release_body.md <<EOF
+          ## Changes in v${TAG}
+
+          EOF
+          if [ -n "$PREV" ]; then
+            git log --oneline --no-decorate "$PREV..HEAD" 2>/dev/null | head -50 >> /tmp/release_body.md
+          else
+            git log --oneline --no-decorate -20 >> /tmp/release_body.md
+          fi
+          cat >> /tmp/release_body.md <<EOF
+
+          ---
+
+          ## Which file should I download?
+
+          ### macOS
+
+          | Your computer | Download |
+          |---|---|
+          | Apple Silicon (M1 · M2 · M3 · M4 · M5) | \`OpenClaude-${TAG}-arm64.dmg\` |
+          | Intel (2019 or earlier) | \`OpenClaude-${TAG}-x64.dmg\` |
+
+          ### Windows
+
+          | Your computer | Download |
+          |---|---|
+          | 64-bit (Intel Core / AMD Ryzen) | \`OpenClaude-Setup-${TAG}-x64.exe\` |
+          | 32-bit only | \`OpenClaude-Setup-${TAG}-ia32.exe\` |
+
+          ### Linux
+
+          | Your distribution | Download |
+          |---|---|
+          | Any distro — 64-bit Intel/AMD | \`OpenClaude-${TAG}.AppImage\` |
+          | Any distro — ARM64 | \`OpenClaude-${TAG}-arm64.AppImage\` |
+          | Debian / Ubuntu / Mint — 64-bit | \`openclaude_${TAG}_amd64.deb\` |
+          | Debian / Ubuntu / Mint — ARM64 | \`openclaude_${TAG}_arm64.deb\` |
+
+          ---
+
+          ## Setup guide
+
+          See TUTORIAL.md (attached) or the [online version](https://github.com/Superior-curtis/OpenClaude/blob/main/TUTORIAL.md).
+          **Video walkthrough:** https://youtu.be/9q-l-EwG6jY
+          EOF
       - uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/*
-          body_path: artifacts/RELEASE_BODY.md
+          files: |
+            artifacts/OpenClaude-*
+            artifacts/openclaude_*
+            artifacts/latest*.yml
+            artifacts/*.blockmap
+            artifacts/TUTORIAL.md
+          body_path: /tmp/release_body.md
+          fail_on_unmatched_files: false
           draft: false
-          append_body: false
