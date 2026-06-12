@@ -1,7 +1,7 @@
 {
   "name": "openclaude",
   "productName": "OpenClaude",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Use Claude Code and Claude Desktop with third-party AI providers — no JSON editing required.",
   "author": "Curtis <curtis@openclaude.app>",
   "main": "src/main.js",
@@ -20,7 +20,7 @@
     "electron-builder": "^25.1.8"
   },
   "dependencies": {
-    "electron-updater": "^6.3.9"
+    "electron-updater": "^6.8.9"
   },
   "build": {
     "appId": "com.openclaude.app",
@@ -104,8 +104,5 @@
       "category": "Development",
       "icon": "build/icon.png"
     }
-  },
-  "dependencies": {
-    "electron-updater": "^6.8.9"
   }
 }
