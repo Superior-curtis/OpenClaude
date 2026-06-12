@@ -79,6 +79,11 @@
             <select id="fastModelSelect"><option value="">Provider default</option></select>
           </div>
         </div>
+        <div id="toolWarn" class="result result-warn hidden" style="margin-top:10px">
+          ⚠ If responses contain raw <code>&lt;tool_call&gt;</code> or <code>&lt;function&gt;</code> text,
+          your model may not support function calling through this provider.
+          Try a different model or use OpenCode's native OpenAI protocol instead.
+        </div>
         <div id="desktopModelsWrap" class="stack hidden">
           <label class="lbl">Claude Desktop model menu <span class="muted">pick up to 4 — switch between them inside the app</span></label>
           <div id="desktopModels" class="model-checks"></div>

@@ -136,6 +136,7 @@ function selectProvider(p) {
   $('desktopModelsWrap').classList.add('hidden');
   $('modelSelect').innerHTML = '<option value="">Provider default</option>';
   $('fastModelSelect').innerHTML = '<option value="">Provider default</option>';
+  $('toolWarn').classList.add('hidden');
   // Restore the saved key + model choices for this provider, if any.
   $('apiKey').value = uiState.keys[p.id] || '';
   const saved = uiState.models[p.id];
@@ -248,6 +249,8 @@ async function loadModels() {
   renderDesktopChecks(models);
   persistModels();
   showResult(true, `Loaded ${models.length} models.`);
+  const gw = ['zen', 'go', 'openrouter'];
+  $('toolWarn').classList.toggle('hidden', !gw.includes(selectedProvider.id) && !selectedProvider.custom);
 }
 
 // --- Status ------------------------------------------------------------------
