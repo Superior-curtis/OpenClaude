@@ -757,38 +757,62 @@ const SYNC_ITEMS = [
   'extensions-installations.json'
 ];
 
-function syncDesktop1pTo3p() {
-  const src = desktopDataDir();
-  const dst = desktop3pDataDir();
-  if (!fs.existsSync(src)) return;
-  fs.mkdirSync(dst, { recursive: true });
-  for (const item of SYNC_ITEMS) {
-    const from = path.join(src, item);
-    const to = path.join(dst, item);
-    try {
-      if (fs.existsSync(from) && !fs.existsSync(to)) {
-        fs.cpSync(from, to, { recursive: true });
+// Merge a directory from → to, keeping the NEWER version of each file
+// (based on mtime). Directories are merged recursively.
+function mergeDir(from, to) {
+  if (!fs.existsSync(from)) return;
+  fs.mkdirSync(to, { recursive: true });
+  for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
+    const srcPath = path.join(from, entry.name);
+    const dstPath = path.join(to, entry.name);
+    if (entry.isDirectory()) {
+      mergeDir(srcPath, dstPath);
+    } else if (entry.isFile()) {
+      const srcMtime = fs.statSync(srcPath).mtimeMs;
+      let dstMtime = 0;
+      try { dstMtime = fs.statSync(dstPath).mtimeMs; } catch {}
+      if (srcMtime > dstMtime) {
+        try {
+          fs.mkdirSync(path.dirname(dstPath), { recursive: true });
+          fs.copyFileSync(srcPath, dstPath);
+        } catch (err) {
+          logError(`mergeDir copy failed ${srcPath} -> ${dstPath}: ${err.message}`);
+        }
       }
-    } catch (err) {
-      logError(`sync 1p->3p failed for ${item}: ${err.message}`);
     }
   }
-  // Merge MCP servers / preferences / cowork files path from the official
-  // claude_desktop_config.json so memory and connectors work in gateway mode.
-  // The 3p side wins on conflicts; deploymentMode is never touched here.
+}
+
+function syncDesktopBothWays() {
+  const d1 = desktopDataDir();
+  const d3 = desktop3pDataDir();
+  if (!fs.existsSync(d1)) return;
+  fs.mkdirSync(d3, { recursive: true });
+  // Sync sessions and extensions both ways (newer file wins)
+  for (const item of SYNC_ITEMS) {
+    mergeDir(path.join(d1, item), path.join(d3, item));
+    mergeDir(path.join(d3, item), path.join(d1, item));
+  }
+  // Merge config: mcpServers, preferences, coworkUserFilesPath both ways
   try {
-    const srcCfgPath = path.join(src, 'claude_desktop_config.json');
-    if (fs.existsSync(srcCfgPath)) {
-      const srcCfg = JSON.parse(fs.readFileSync(srcCfgPath, 'utf8'));
-      let dstCfg = {};
-      try { dstCfg = JSON.parse(fs.readFileSync(DESKTOP_3P_CONFIG_PATH, 'utf8')); } catch {}
+    const cfg1Path = path.join(d1, 'claude_desktop_config.json');
+    const cfg3Path = DESKTOP_3P_CONFIG_PATH;
+    if (fs.existsSync(cfg1Path)) {
+      const cfg1 = JSON.parse(fs.readFileSync(cfg1Path, 'utf8'));
+      let cfg3 = {};
+      try { cfg3 = JSON.parse(fs.readFileSync(cfg3Path, 'utf8')); } catch {}
+      let changed = false;
       for (const key of ['mcpServers', 'coworkUserFilesPath', 'preferences']) {
-        if (srcCfg[key] !== undefined && dstCfg[key] === undefined) dstCfg[key] = srcCfg[key];
+        if (cfg1[key] !== undefined && cfg3[key] === undefined) { cfg3[key] = cfg1[key]; changed = true; }
+        if (cfg3[key] !== undefined && cfg1[key] === undefined) { cfg1[key] = cfg3[key]; changed = true; }
       }
-      fs.writeFileSync(DESKTOP_3P_CONFIG_PATH, JSON.stringify(dstCfg, null, 2) + '\n');
+      if (changed) {
+        fs.writeFileSync(cfg3Path, JSON.stringify(cfg3, null, 2) + '\n');
+        fs.writeFileSync(cfg1Path, JSON.stringify(cfg1, null, 2) + '\n');
+      }
     }
   } catch (err) {
-    logError(`sync 1p->3p config merge failed: ${err.message}`);
+    logError(`sync config merge failed: ${err.message}`);
   }
 }
 
@@ -897,7 +921,7 @@ ipcMain.handle('desktop:get', () => ({
 function doApplyDesktop(cfg) {
   cfg.apiKey = resolveApiKey(cfg.apiKey);
   try {
-    syncDesktop1pTo3p();
+    syncDesktopBothWays();
     if (cfg.viaProxy) {
       // Point Claude Desktop at the local proxy and route real provider models
       // through it. Each model is exposed under a "display route" name so
@@ -936,6 +960,7 @@ ipcMain.handle('desktop:restore', () => {
   try {
     const res = restoreDesktopConfig();
     if (res.ok) {
+      syncDesktopBothWays();
       stopProxy();
       const cfg = readProxyConfig();
       if (cfg.enabled) writeProxyConfig({ ...cfg, enabled: false });
