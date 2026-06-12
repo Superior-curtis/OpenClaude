@@ -673,36 +673,41 @@ async function startAutoUpdate() {
 }
 
 // Listen for auto-update status from main process
-window.openclaude.onAutoUpdateStatus((status, data) => {
-  const b = $('updateBanner');
-  b.className = 'result result-ok';
-  switch (status) {
-    case 'checking': b.textContent = 'Checking for update…'; break;
-    case 'available': b.textContent = `v${data} available — downloading…`; window.openclaude.autoDownload(); break;
-    case 'not-available': b.textContent = 'You have the latest version.'; break;
-    case 'downloaded': {
-      b.textContent = `v${data} downloaded.`;
-      $('updateProgress').classList.add('hidden');
-      const btn = document.createElement('a');
-      btn.href = '#';
-      btn.textContent = ' Restart to install';
-      btn.style.cssText = 'color:inherit;font-weight:bold;text-decoration:underline';
-      btn.addEventListener('click', (e) => { e.preventDefault(); window.openclaude.autoInstall(); });
-      b.appendChild(btn);
-      break;
+// Listen for auto-update status from main process
+if (window.openclaude && window.openclaude.onAutoUpdateStatus) {
+  window.openclaude.onAutoUpdateStatus((status, data) => {
+    const b = $('updateBanner');
+    b.className = 'result result-ok';
+    switch (status) {
+      case 'checking': b.textContent = 'Checking for update…'; break;
+      case 'available': b.textContent = `v${data} available — downloading…`; window.openclaude.autoDownload(); break;
+      case 'not-available': b.textContent = 'You have the latest version.'; break;
+      case 'downloaded': {
+        b.textContent = `v${data} downloaded.`;
+        $('updateProgress').classList.add('hidden');
+        const btn = document.createElement('a');
+        btn.href = '#';
+        btn.textContent = ' Restart to install';
+        btn.style.cssText = 'color:inherit;font-weight:bold;text-decoration:underline';
+        btn.addEventListener('click', (e) => { e.preventDefault(); window.openclaude.autoInstall(); });
+        b.appendChild(btn);
+        break;
+      }
+      case 'error':
+        b.className = 'result result-err';
+        b.textContent = `Update failed: ${data}`;
+        $('updateProgress').classList.add('hidden');
+        break;
     }
-    case 'error':
-      b.className = 'result result-err';
-      b.textContent = `Update failed: ${data}`;
-      $('updateProgress').classList.add('hidden');
-      break;
-  }
-});
+  });
+}
 
-window.openclaude.onAutoUpdateProgress((pct) => {
-  $('updateBar').style.width = `${pct}%`;
-  $('updatePct').textContent = `${Math.round(pct)}%`;
-});
+if (window.openclaude && window.openclaude.onAutoUpdateProgress) {
+  window.openclaude.onAutoUpdateProgress((pct) => {
+    $('updateBar').style.width = `${pct}%`;
+    $('updatePct').textContent = `${Math.round(pct)}%`;
+  });
+}
 
 // --- Wire up -----------------------------------------------------------------
 
