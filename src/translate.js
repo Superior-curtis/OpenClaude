@@ -32,6 +32,23 @@ function resolveModel(requested, cfg) {
   return requested; // a real provider model id (e.g. from Claude Code) — pass through
 }
 
+// Some gateways (e.g. OpenCode Zen -> DeepSeek) silently DROP message content
+// written as a plain string during their internal protocol translation, then
+// reject the request as "Empty input messages". Anthropic's API treats
+// `content: "text"` and `content: [{type:"text",text:"text"}]` as equivalent,
+// so we normalize every message to block form before forwarding.
+function normalizeContentBlocks(json) {
+  if (Array.isArray(json.messages)) {
+    json.messages = json.messages.map((m) => {
+      if (typeof m.content === 'string') {
+        return { ...m, content: [{ type: 'text', text: m.content || ' ' }] };
+      }
+      return m;
+    });
+  }
+  return json;
+}
+
 // Claude Desktop sends Anthropic server-side tools (web search etc.) that
 // provider gateways can't translate — keep only plain custom tools, which
 // have a name and an input schema. Mutates and returns the request object.
@@ -131,6 +148,7 @@ module.exports = {
   displayRoute,
   parseRoute,
   resolveModel,
+  normalizeContentBlocks,
   sanitizeTools,
   anthropicToOpenAi,
   openAiToAnthropic

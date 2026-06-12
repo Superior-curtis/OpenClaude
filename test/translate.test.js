@@ -108,3 +108,18 @@ test('openAiToAnthropic: length finish -> max_tokens', () => {
   const out = openAiToAnthropic({ choices: [{ message: { content: 'x' }, finish_reason: 'length' }] }, 'm');
   assert.strictEqual(out.stop_reason, 'max_tokens');
 });
+
+const { normalizeContentBlocks } = require('../src/translate');
+
+test('normalizeContentBlocks: string content becomes block form', () => {
+  const body = { messages: [{ role: 'user', content: 'hi' }, { role: 'assistant', content: [{ type: 'text', text: 'yo' }] }] };
+  normalizeContentBlocks(body);
+  assert.deepStrictEqual(body.messages[0].content, [{ type: 'text', text: 'hi' }]);
+  assert.deepStrictEqual(body.messages[1].content, [{ type: 'text', text: 'yo' }]); // untouched
+});
+
+test('normalizeContentBlocks: empty string becomes non-empty block', () => {
+  const body = { messages: [{ role: 'user', content: '' }] };
+  normalizeContentBlocks(body);
+  assert.ok(body.messages[0].content[0].text.length > 0);
+});

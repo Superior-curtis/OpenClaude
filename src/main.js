@@ -7,7 +7,7 @@ const http = require('http');
 const https = require('https');
 
 const crypto = require('crypto');
-const { ZWSP, displayRoute, parseRoute, resolveModel, sanitizeTools, anthropicToOpenAi, openAiToAnthropic } = require('./translate');
+const { ZWSP, displayRoute, parseRoute, resolveModel, normalizeContentBlocks, sanitizeTools, anthropicToOpenAi, openAiToAnthropic } = require('./translate');
 
 const CLAUDE_DIR = path.join(os.homedir(), '.claude');
 const SETTINGS_PATH = path.join(CLAUDE_DIR, 'settings.json');
@@ -171,6 +171,7 @@ function startProxy() {
           json.model = resolveModel(json.model, cfg);
         }
         sanitizeTools(json);
+        normalizeContentBlocks(json);
       }
 
       const t0 = Date.now();
@@ -185,8 +186,9 @@ function startProxy() {
         });
       });
 
-      // OpenAI upstreams have no token-counting endpoint — return an estimate.
-      if (useOpenAi && /count_tokens/.test(req.url)) {
+      // Most gateways (Zen, Go, OpenAI-protocol hosts) have no token-counting
+      // endpoint and 404 — answer locally with an estimate.
+      if (/count_tokens/.test(req.url)) {
         const approx = Math.ceil(Buffer.concat(chunks).length / 4);
         res.writeHead(200, { 'content-type': 'application/json' });
         res.end(JSON.stringify({ input_tokens: approx }));

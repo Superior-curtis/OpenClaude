@@ -40,10 +40,10 @@ OpenClaude is a desktop app that configures Claude Code and Claude Desktop to ta
 
 | Platform | Download |
 |----------|----------|
-| **macOS** Apple Silicon | `OpenClaude-0.2.0-arm64.dmg` |
-| **macOS** Intel | `OpenClaude-0.2.0-x64.dmg` |
-| **Windows** x64 | `OpenClaude-Setup-0.2.0-x64.exe` |
-| **Windows** 32-bit | `OpenClaude-Setup-0.2.0-ia32.exe` |
+| **macOS** Apple Silicon | `OpenClaude-0.2.1-arm64.dmg` |
+| **macOS** Intel | `OpenClaude-0.2.1-x64.dmg` |
+| **Windows** x64 | `OpenClaude-Setup-0.2.1-x64.exe` |
+| **Windows** 32-bit | `OpenClaude-Setup-0.2.1-ia32.exe` |
 | **Linux** x64 | `.AppImage` or `.deb` |
 | **Linux** ARM64 | `-arm64.AppImage` or `_arm64.deb` |
 
