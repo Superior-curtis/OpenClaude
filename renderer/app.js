@@ -1,3 +1,7 @@
+// Electron 36 removed window.prompt() — fallback so Chromium internals (e.g.
+// <select> dropdown) don't throw.
+if (typeof window.prompt !== 'function') window.prompt = () => null;
+
 // Models that NVIDIA NIM (and some OpenAI-compatible hosts) list but that are
 // NOT chat/completions models — embeddings, rerankers, speech, vision-OCR,
 // image/video generation, biology, etc. Excluded from the picker.
