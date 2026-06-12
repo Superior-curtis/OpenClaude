@@ -755,7 +755,11 @@ function restoreDesktopConfig() {
 const SYNC_ITEMS = [
   'local-agent-mode-sessions',
   'claude-code-sessions',
+  'Claude Extensions',
   'Claude Extensions Settings',
+  'claude-code-vm',
+  'vm_bundles',
+  'blob_storage',
   'extensions-installations.json'
 ];
 
