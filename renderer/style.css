@@ -140,6 +140,8 @@ code { background: var(--bg); padding: 2px 6px; border-radius: 5px; font-size: 1
 .btn-primary:hover:not(:disabled) { background: var(--accent-hi); }
 .btn-soft { background: var(--panel-2); }
 .btn-soft:hover:not(:disabled) { border-color: var(--accent); }
+.btn-ghost { border-color: transparent; }
+.btn-ghost:hover:not(:disabled) { border-color: var(--border); }
 .btn-ghost-danger { color: var(--red); border-color: transparent; }
 .btn-ghost-danger:hover:not(:disabled) { border-color: var(--red); }
 .icon-btn {

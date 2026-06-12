@@ -1,6 +1,7 @@
 // Electron 36 removed window.prompt() — fallback so Chromium internals (e.g.
-// <select> dropdown) don't throw.
-if (typeof window.prompt !== 'function') window.prompt = () => null;
+// <select> dropdown) don't throw. Electron's own prompt is a function that
+// throws, so replace unconditionally.
+window.prompt = () => null;
 
 // Models that NVIDIA NIM (and some OpenAI-compatible hosts) list but that are
 // NOT chat/completions models — embeddings, rerankers, speech, vision-OCR,
@@ -620,8 +621,29 @@ function renderProfiles() {
   });
 }
 
-function saveProfile() {
-  const name = prompt('Profile name (e.g. "Go GLM", "OpenAI GPT-5"):');
+let _profileResolve = null;
+function showPrompt(msg) {
+  $('promptTitle').textContent = msg;
+  $('promptInput').value = '';
+  $('promptOverlay').classList.remove('hidden');
+  $('promptInput').focus();
+  return new Promise((resolve) => { _profileResolve = resolve; });
+}
+$('promptOkBtn').addEventListener('click', () => {
+  $('promptOverlay').classList.add('hidden');
+  if (_profileResolve) _profileResolve($('promptInput').value || null);
+});
+$('promptCancelBtn').addEventListener('click', () => {
+  $('promptOverlay').classList.add('hidden');
+  if (_profileResolve) _profileResolve(null);
+});
+$('promptInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') $('promptOkBtn').click();
+  if (e.key === 'Escape') $('promptCancelBtn').click();
+});
+
+async function saveProfile() {
+  const name = await showPrompt('Profile name (e.g. "Go GLM", "OpenAI GPT-5"):');
   if (!name) return;
   const cfg = providerCfg();
   const desktop = checkedDesktopModels();
