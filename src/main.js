@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, shell, Tray, Menu, nativeImage, dialog } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -1030,8 +1031,32 @@ ipcMain.handle('app:set-autolaunch', (_evt, on) => {
   return true;
 });
 
-// --- Update check (GitHub releases) ---
+// --- Update check & auto-update (electron-updater) ---------------------------
 const REPO_SLUG = 'Superior-curtis/OpenClaude';
+
+// Configure autoUpdater to use the GitHub release feed
+autoUpdater.autoDownload = false; // we download on user confirmation
+autoUpdater.autoInstallOnAppQuit = true;
+
+autoUpdater.on('checking-for-update', () => {
+  BrowserWindow.getAllWindows().forEach(w => w.webContents.send('update:status', 'checking'));
+});
+autoUpdater.on('update-available', (info) => {
+  BrowserWindow.getAllWindows().forEach(w => w.webContents.send('update:status', 'available', info.version));
+});
+autoUpdater.on('update-not-available', () => {
+  BrowserWindow.getAllWindows().forEach(w => w.webContents.send('update:status', 'not-available'));
+});
+autoUpdater.on('download-progress', (p) => {
+  BrowserWindow.getAllWindows().forEach(w => w.webContents.send('update:progress', p.percent));
+});
+autoUpdater.on('update-downloaded', (info) => {
+  BrowserWindow.getAllWindows().forEach(w => w.webContents.send('update:status', 'downloaded', info.version));
+});
+autoUpdater.on('error', (err) => {
+  BrowserWindow.getAllWindows().forEach(w => w.webContents.send('update:status', 'error', err.message));
+});
+
 ipcMain.handle('app:check-update', async () => {
   try {
     const res = await fetch(`https://api.github.com/repos/${REPO_SLUG}/releases/latest`, {
@@ -1046,6 +1071,29 @@ ipcMain.handle('app:check-update', async () => {
   } catch {
     return { ok: false };
   }
+});
+
+ipcMain.handle('app:auto-update', async () => {
+  try {
+    autoUpdater.checkForUpdates();
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('app:auto-download', async () => {
+  try {
+    autoUpdater.downloadUpdate();
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('app:auto-install', () => {
+  setImmediate(() => autoUpdater.quitAndInstall());
+  return { ok: true };
 });
 
 // --- Config profiles ---

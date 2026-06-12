@@ -22,6 +22,12 @@
     <!-- LEFT: setup -->
     <div class="col-setup">
       <div id="updateBanner" class="result hidden"></div>
+      <div id="updateProgress" class="hidden" style="margin-bottom:8px;display:flex;align-items:center;gap:8px;font-size:13px">
+        <div style="flex:1;height:6px;background:#2a2d35;border-radius:3px;overflow:hidden">
+          <div id="updateBar" style="width:0%;height:100%;background:#4ade80;border-radius:3px;transition:width .3s"></div>
+        </div>
+        <span id="updatePct">0%</span>
+      </div>
 
       <section class="card">
         <div class="card-head"><span class="step">1</span><h2>Provider</h2>

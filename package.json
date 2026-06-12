@@ -19,9 +19,18 @@
     "electron": "^36.3.1",
     "electron-builder": "^25.1.8"
   },
+  "dependencies": {
+    "electron-updater": "^6.3.9"
+  },
   "build": {
     "appId": "com.openclaude.app",
     "productName": "OpenClaude",
+    "publish": {
+      "provider": "github",
+      "owner": "Superior-curtis",
+      "repo": "OpenClaude",
+      "releaseType": "release"
+    },
     "files": [
       "src/**/*",
       "renderer/**/*",
@@ -32,8 +41,20 @@
     "mac": {
       "category": "public.app-category.developer-tools",
       "target": [
-        { "target": "dmg", "arch": ["x64", "arm64"] },
-        { "target": "zip", "arch": ["x64", "arm64"] }
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
       ],
       "icon": "build/icon.icns",
       "artifactName": "OpenClaude-${version}-${arch}.${ext}",
@@ -42,7 +63,13 @@
     },
     "win": {
       "target": [
-        { "target": "nsis", "arch": ["x64", "ia32"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "ia32"
+          ]
+        }
       ],
       "icon": "build/icon.ico",
       "artifactName": "OpenClaude-Setup-${version}-${arch}.${ext}"
@@ -59,11 +86,26 @@
     },
     "linux": {
       "target": [
-        { "target": "AppImage", "arch": ["x64", "arm64"] },
-        { "target": "deb", "arch": ["x64", "arm64"] }
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
       ],
       "category": "Development",
       "icon": "build/icon.png"
     }
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
   }
 }

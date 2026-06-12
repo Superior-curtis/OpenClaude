@@ -648,16 +648,61 @@ async function refreshLog() {
   }).join('');
 }
 
-// --- Update check ------------------------------------------------------------
+// --- Update check & auto-update ------------------------------------------------
 
 async function checkUpdate() {
   const u = await window.openclaude.checkUpdate();
   if (u.ok && u.newer) {
     const b = $('updateBanner');
     b.className = 'result result-ok';
-    b.innerHTML = `A new version (v${u.latest}) is available — you have v${u.current}. <a href="${u.url}" style="color:inherit;text-decoration:underline">Download</a>`;
+    b.innerHTML = `v${u.latest} available (you have v${u.current}). ` +
+      `<a href="#" id="updateDownloadBtn" style="color:inherit;font-weight:bold">Download &amp; Install</a>`;
+    $('updateDownloadBtn').addEventListener('click', (e) => {
+      e.preventDefault();
+      startAutoUpdate();
+    });
   }
 }
+
+async function startAutoUpdate() {
+  const b = $('updateBanner');
+  b.className = 'result result-ok';
+  b.textContent = 'Checking for update…';
+  $('updateProgress').classList.remove('hidden');
+  await window.openclaude.autoUpdate();
+}
+
+// Listen for auto-update status from main process
+window.openclaude.onAutoUpdateStatus((status, data) => {
+  const b = $('updateBanner');
+  b.className = 'result result-ok';
+  switch (status) {
+    case 'checking': b.textContent = 'Checking for update…'; break;
+    case 'available': b.textContent = `v${data} available — downloading…`; window.openclaude.autoDownload(); break;
+    case 'not-available': b.textContent = 'You have the latest version.'; break;
+    case 'downloaded': {
+      b.textContent = `v${data} downloaded.`;
+      $('updateProgress').classList.add('hidden');
+      const btn = document.createElement('a');
+      btn.href = '#';
+      btn.textContent = ' Restart to install';
+      btn.style.cssText = 'color:inherit;font-weight:bold;text-decoration:underline';
+      btn.addEventListener('click', (e) => { e.preventDefault(); window.openclaude.autoInstall(); });
+      b.appendChild(btn);
+      break;
+    }
+    case 'error':
+      b.className = 'result result-err';
+      b.textContent = `Update failed: ${data}`;
+      $('updateProgress').classList.add('hidden');
+      break;
+  }
+});
+
+window.openclaude.onAutoUpdateProgress((pct) => {
+  $('updateBar').style.width = `${pct}%`;
+  $('updatePct').textContent = `${Math.round(pct)}%`;
+});
 
 // --- Wire up -----------------------------------------------------------------
 

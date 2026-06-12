@@ -25,6 +25,11 @@ contextBridge.exposeInMainWorld('openclaude', {
   getAutoLaunch: () => ipcRenderer.invoke('app:get-autolaunch'),
   setAutoLaunch: (on) => ipcRenderer.invoke('app:set-autolaunch', on),
   checkUpdate: () => ipcRenderer.invoke('app:check-update'),
+  autoUpdate: () => ipcRenderer.invoke('app:auto-update'),
+  autoDownload: () => ipcRenderer.invoke('app:auto-download'),
+  autoInstall: () => ipcRenderer.invoke('app:auto-install'),
+  onAutoUpdateStatus: (fn) => { ipcRenderer.on('update:status', (_e, status, data) => fn(status, data)); },
+  onAutoUpdateProgress: (fn) => { ipcRenderer.on('update:progress', (_e, pct) => fn(pct)); },
   applyProfile: (profile) => ipcRenderer.invoke('profile:apply', profile),
   onStateChanged: (fn) => ipcRenderer.on('state:changed', fn)
 });
