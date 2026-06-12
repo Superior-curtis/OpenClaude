@@ -65,11 +65,39 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           merge-multiple: true
           path: artifacts
+      - name: Generate release body
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PREV=$(git tag --sort=-creatordate | grep '^v' | sed -n "2p" || echo "")
+          cat > artifacts/RELEASE_BODY.md <<EOF
+          ## Changes in v${TAG}
+
+          EOF
+          if [ -n "$PREV" ]; then
+            git log --oneline --no-decorate "$PREV..HEAD" 2>/dev/null | head -50 >> artifacts/RELEASE_BODY.md
+          else
+            git log --oneline --no-decorate -20 >> artifacts/RELEASE_BODY.md
+          fi
+          cat >> artifacts/RELEASE_BODY.md <<EOF
+
+          ---
+
+          ## Setup guide
+
+          See TUTORIAL.md (attached to this release) or the [online version](https://github.com/Superior-curtis/OpenClaude/blob/main/TUTORIAL.md).
+
+          **Video walkthrough:** https://youtu.be/9q-l-EwG6jY
+          EOF
+      - name: Copy TUTORIAL.md to release
+        run: cp TUTORIAL.md artifacts/
       - uses: softprops/action-gh-release@v2
         with:
           files: artifacts/*
+          body_path: artifacts/RELEASE_BODY.md
           draft: false
+          append_body: false
