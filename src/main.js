@@ -790,10 +790,29 @@ function syncDesktopBothWays() {
   const d3 = desktop3pDataDir();
   if (!fs.existsSync(d1)) return;
   fs.mkdirSync(d3, { recursive: true });
-  // Sync sessions and extensions both ways (newer file wins)
+  // Sync sessions and extensions both ways (newer file wins).
+  // Items may be files (extensions-installations.json) or directories
+  // (local-agent-mode-sessions, claude-code-sessions, …).
+  const syncPath = (src, dst) => {
+    try {
+      if (!fs.existsSync(src)) return;
+      if (fs.statSync(src).isFile()) {
+        let dstMtime = 0;
+        try { dstMtime = fs.statSync(dst).mtimeMs; } catch {}
+        if (fs.statSync(src).mtimeMs > dstMtime) {
+          fs.mkdirSync(path.dirname(dst), { recursive: true });
+          fs.copyFileSync(src, dst);
+        }
+      } else {
+        mergeDir(src, dst);
+      }
+    } catch (err) {
+      logError(`syncPath failed ${src} -> ${dst}: ${err.message}`);
+    }
+  };
   for (const item of SYNC_ITEMS) {
-    mergeDir(path.join(d1, item), path.join(d3, item));
-    mergeDir(path.join(d3, item), path.join(d1, item));
+    syncPath(path.join(d1, item), path.join(d3, item));
+    syncPath(path.join(d3, item), path.join(d1, item));
   }
   // Merge config: mcpServers, preferences, coworkUserFilesPath both ways
   try {
