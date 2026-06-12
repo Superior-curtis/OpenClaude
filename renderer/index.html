@@ -21,8 +21,12 @@
   <main class="layout">
     <!-- LEFT: setup -->
     <div class="col-setup">
+      <div id="updateBanner" class="result hidden"></div>
+
       <section class="card">
-        <div class="card-head"><span class="step">1</span><h2>Provider</h2></div>
+        <div class="card-head"><span class="step">1</span><h2>Provider</h2>
+          <input id="providerSearch" type="search" placeholder="Search providers…" class="search-input" spellcheck="false" />
+        </div>
         <div id="providerGrid" class="provider-grid"></div>
         <div id="customRow" class="stack hidden">
           <label class="lbl">Base URL</label>
@@ -32,6 +36,10 @@
             <option value="anthropic">Anthropic — /v1/messages</option>
             <option value="openai">OpenAI — /v1/chat/completions</option>
           </select>
+          <div class="row">
+            <input id="customPresetName" type="text" placeholder="Preset name (e.g. My LiteLLM)" style="flex:1" spellcheck="false" />
+            <button id="saveCustomBtn" class="btn btn-soft">Save preset</button>
+          </div>
         </div>
         <p id="providerHint" class="hint"></p>
       </section>
@@ -91,9 +99,20 @@
           </div>
         </div>
         <p class="hint">Restart the target app after applying. Non-Claude models on Claude Desktop run through OpenClaude's background proxy — keep the app open (tray icon).</p>
+        <div class="row" style="margin-top:10px">
+          <button id="saveProfileBtn" class="btn btn-soft">Save current setup as profile…</button>
+        </div>
+        <div id="profilesRow" class="chips hidden"></div>
       </section>
 
       <div id="result" class="result hidden"></div>
+
+      <section class="card">
+        <div class="card-head"><h2>Proxy log</h2>
+          <button id="logRefreshBtn" class="btn btn-soft" style="margin-left:auto">Refresh</button>
+        </div>
+        <div id="proxyLogBody" class="log-body">No requests yet. The log fills up while Claude Desktop / Code use the local proxy.</div>
+      </section>
     </div>
 
     <!-- RIGHT: live status -->
@@ -114,12 +133,25 @@
         </div>
         <p class="hint">Claude Code file: <code id="settingsPath"></code></p>
         <p class="hint">Data directory: <code id="desktopDataPath"></code></p>
-        <p class="hint">A backup is saved before every change. Your key is stored only on this computer and sent only to the provider you choose.</p>
+        <p class="hint">A backup is saved before every change. Your key is stored encrypted on this computer and sent only to the provider you choose.</p>
+        <label class="toggle-row">
+          <input id="autoLaunchToggle" type="checkbox" />
+          <span>Start OpenClaude at login <span class="muted">(keeps the Claude Desktop proxy alive)</span></span>
+        </label>
         <hr style="border-color:var(--border-soft);margin:12px 0">
         <button id="uninstallBtn" class="btn btn-ghost-danger" style="width:100%">Clean up &amp; remove OpenClaude</button>
       </section>
     </aside>
   </main>
+
+  <div id="errorOverlay" class="error-overlay hidden">
+    <div class="error-box">
+      <h2>Something went wrong</h2>
+      <p id="errorOverlayMsg"></p>
+      <button class="btn btn-primary" onclick="location.reload()">Reload OpenClaude</button>
+    </div>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>

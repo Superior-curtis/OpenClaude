@@ -6,6 +6,7 @@ const http = require('http');
 const https = require('https');
 
 const crypto = require('crypto');
+const { ZWSP, displayRoute, parseRoute, resolveModel, sanitizeTools, anthropicToOpenAi, openAiToAnthropic } = require('./translate');
 
 const CLAUDE_DIR = path.join(os.homedir(), '.claude');
 const SETTINGS_PATH = path.join(CLAUDE_DIR, 'settings.json');
@@ -167,17 +168,20 @@ function startProxy() {
           requestedModel = json.model;
           json.model = resolveModel(json.model, cfg);
         }
-        // Claude Desktop sends Anthropic server-side tools (web search etc.)
-        // that provider gateways can't translate — keep only plain custom
-        // tools, which have a name and an input schema.
-        if (Array.isArray(json.tools)) {
-          json.tools = json.tools.filter((t) => t && typeof t.name === 'string' && t.input_schema);
-          if (json.tools.length === 0) {
-            delete json.tools;
-            delete json.tool_choice;
-          }
-        }
+        sanitizeTools(json);
       }
+
+      const t0 = Date.now();
+      res.on('finish', () => {
+        pushProxyLog({
+          path: req.url,
+          modelIn: requestedModel ? requestedModel.split(ZWSP).join('') : null,
+          modelOut: json ? json.model : null,
+          stream: isStream,
+          status: res.statusCode,
+          ms: Date.now() - t0
+        });
+      });
 
       // OpenAI upstreams have no token-counting endpoint — return an estimate.
       if (useOpenAi && /count_tokens/.test(req.url)) {
@@ -281,108 +285,6 @@ function startProxy() {
   });
   updateTray();
   return true;
-}
-
-// --- Model display routes -----------------------------------------------------
-// Claude Desktop validates gateway model names: they must reference "claude" or
-// "anthropic" and must NOT contain known third-party model keywords (glm,
-// deepseek, kimi, qwen, …). The check is an ASCII substring match, so we weave
-// zero-width spaces between characters (invisible in the UI) and append a
-// "(claude)" suffix. The picker then shows the real model name.
-const ZWSP = '\u200b';
-const ROUTE_SUFFIX = ' (claude)';
-
-function displayRoute(modelId) {
-  return modelId.split('').join(ZWSP) + ROUTE_SUFFIX;
-}
-
-function parseRoute(name) {
-  const clean = name.split(ZWSP).join('');
-  if (clean.endsWith(ROUTE_SUFFIX)) return clean.slice(0, -ROUTE_SUFFIX.length);
-  return null;
-}
-
-// Resolve the model Claude Desktop/Code asked for to the real provider model.
-function resolveModel(requested, cfg) {
-  const fromRoute = parseRoute(requested);
-  if (fromRoute) return fromRoute;
-  if (cfg.modelMap && cfg.modelMap[requested]) return cfg.modelMap[requested];
-  if (/^claude-|anthropic/i.test(requested)) {
-    return /haiku|small|mini/i.test(requested) ? (cfg.fastModel || cfg.mainModel) : cfg.mainModel;
-  }
-  return requested; // a real provider model id (e.g. from Claude Code) — pass through
-}
-
-// --- Anthropic <-> OpenAI protocol translation ---------------------------------
-// Lets the proxy front OpenAI-protocol providers (NVIDIA NIM, OpenRouter, …)
-// while Claude Desktop/Code speak the Anthropic messages protocol.
-
-function anthropicToOpenAi(json) {
-  const out = { model: json.model, max_tokens: json.max_tokens, stream: json.stream === true };
-  for (const k of ['temperature', 'top_p']) if (json[k] !== undefined) out[k] = json[k];
-  if (Array.isArray(json.stop_sequences) && json.stop_sequences.length) out.stop = json.stop_sequences;
-  const msgs = [];
-  if (json.system) {
-    msgs.push({
-      role: 'system',
-      content: typeof json.system === 'string' ? json.system : json.system.map((b) => b.text || '').join('\n')
-    });
-  }
-  for (const m of json.messages || []) {
-    const blocks = typeof m.content === 'string' ? [{ type: 'text', text: m.content }] : m.content || [];
-    if (m.role === 'assistant') {
-      const msg = { role: 'assistant', content: blocks.filter((b) => b.type === 'text').map((b) => b.text).join('') || null };
-      const calls = blocks
-        .filter((b) => b.type === 'tool_use')
-        .map((b) => ({ id: b.id, type: 'function', function: { name: b.name, arguments: JSON.stringify(b.input || {}) } }));
-      if (calls.length) msg.tool_calls = calls;
-      msgs.push(msg);
-    } else {
-      for (const r of blocks.filter((b) => b.type === 'tool_result')) {
-        msgs.push({
-          role: 'tool',
-          tool_call_id: r.tool_use_id,
-          content: typeof r.content === 'string' ? r.content : (r.content || []).map((b) => b.text || '').join('\n')
-        });
-      }
-      const text = blocks.filter((b) => b.type === 'text').map((b) => b.text).join('\n');
-      const hadToolResults = blocks.some((b) => b.type === 'tool_result');
-      if (text || !hadToolResults) msgs.push({ role: 'user', content: text });
-    }
-  }
-  out.messages = msgs;
-  if (Array.isArray(json.tools) && json.tools.length) {
-    out.tools = json.tools.map((t) => ({
-      type: 'function',
-      function: { name: t.name, description: t.description || '', parameters: t.input_schema || { type: 'object' } }
-    }));
-    const tc = json.tool_choice;
-    if (tc) out.tool_choice = tc.type === 'any' ? 'required' : tc.type === 'tool' ? { type: 'function', function: { name: tc.name } } : 'auto';
-  }
-  return out;
-}
-
-function openAiToAnthropic(d, requestedModel) {
-  const choice = (d.choices || [])[0] || {};
-  const msg = choice.message || {};
-  const content = [];
-  if (msg.content) content.push({ type: 'text', text: msg.content });
-  for (const c of msg.tool_calls || []) {
-    let input = {};
-    try { input = JSON.parse(c.function.arguments || '{}'); } catch {}
-    content.push({ type: 'tool_use', id: c.id || `toolu_${Math.random().toString(36).slice(2)}`, name: c.function.name, input });
-  }
-  const fr = choice.finish_reason;
-  return {
-    id: d.id || 'msg_openclaude_proxy',
-    type: 'message',
-    role: 'assistant',
-    model: d.model || requestedModel,
-    content,
-    stop_reason: fr === 'length' ? 'max_tokens' : fr === 'tool_calls' ? 'tool_use' : 'end_turn',
-    stop_sequence: null,
-    usage: { input_tokens: (d.usage && d.usage.prompt_tokens) || 0, output_tokens: (d.usage && d.usage.completion_tokens) || 0 }
-  };
 }
 
 // Converts an OpenAI chat-completions SSE stream into Anthropic messages events.
@@ -617,22 +519,39 @@ function stopProxy() {
   updateTray();
 }
 
+// Menu-bar mini mode: the tray is always present, shows proxy state, and lets
+// the user switch between saved config profiles without opening the window.
 function updateTray() {
-  const wantTray = Boolean(proxyServer);
-  if (wantTray && !tray) {
+  if (!tray) {
     let icon = nativeImage.createFromPath(path.join(__dirname, '..', 'build', 'icon.png'));
     if (!icon.isEmpty()) icon = icon.resize({ width: 18, height: 18 });
     tray = new Tray(icon);
-    tray.setToolTip('OpenClaude proxy is running');
-    tray.setContextMenu(Menu.buildFromTemplate([
-      { label: 'Open OpenClaude', click: () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); else BrowserWindow.getAllWindows()[0].focus(); } },
-      { type: 'separator' },
-      { label: 'Quit (stops Claude Desktop proxy)', click: () => { stopProxy(); app.quit(); } }
-    ]));
-  } else if (!wantTray && tray) {
-    tray.destroy();
-    tray = null;
   }
+  tray.setToolTip(proxyServer ? 'OpenClaude — proxy running' : 'OpenClaude');
+
+  let profiles = [];
+  try { profiles = require('./state').readState().profiles || []; } catch {}
+  const profileItems = profiles.length
+    ? profiles.map((p) => ({
+        label: `${p.name} (${p.main || 'default'})`,
+        click: () => {
+          const r = applyProfile(p);
+          tray.setToolTip(r.ok ? `OpenClaude — applied "${p.name}"` : `OpenClaude — failed: ${r.error}`);
+          for (const w of BrowserWindow.getAllWindows()) w.webContents.send('state:changed');
+        }
+      }))
+    : [{ label: 'No saved profiles yet', enabled: false }];
+
+  tray.setContextMenu(Menu.buildFromTemplate([
+    { label: 'Open OpenClaude', click: () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); else BrowserWindow.getAllWindows()[0].focus(); } },
+    { type: 'separator' },
+    { label: proxyServer ? `Proxy: running on port ${PROXY_PORT}` : 'Proxy: stopped', enabled: false },
+    { type: 'separator' },
+    { label: 'Switch profile', enabled: false },
+    ...profileItems,
+    { type: 'separator' },
+    { label: 'Quit (stops Claude Desktop proxy)', click: () => { stopProxy(); app.quit(); } }
+  ]));
 }
 
 // --- Claude Desktop (configLibrary) ------------------------------------------
@@ -825,6 +744,74 @@ function restoreDesktopConfig() {
   return { ok: false, error: 'The active Claude Desktop config was not created by OpenClaude. Change it in Claude Desktop: Developer → Configure Third-Party Inference.' };
 }
 
+// --- Sync official Claude Desktop data into gateway (3p) mode -----------------
+// Claude Desktop's gateway mode runs from a separate "-3p" data dir, so MCP
+// servers, extensions, local sessions, and preferences configured in the
+// official app are missing there. Copy them over (without overwriting anything
+// the 3p side already has). Note: claude.ai conversations live on Anthropic's
+// servers and cannot be carried over.
+const SYNC_ITEMS = [
+  'local-agent-mode-sessions',
+  'claude-code-sessions',
+  'Claude Extensions Settings',
+  'extensions-installations.json'
+];
+
+function syncDesktop1pTo3p() {
+  const src = desktopDataDir();
+  const dst = desktop3pDataDir();
+  if (!fs.existsSync(src)) return;
+  fs.mkdirSync(dst, { recursive: true });
+  for (const item of SYNC_ITEMS) {
+    const from = path.join(src, item);
+    const to = path.join(dst, item);
+    try {
+      if (fs.existsSync(from) && !fs.existsSync(to)) {
+        fs.cpSync(from, to, { recursive: true });
+      }
+    } catch (err) {
+      logError(`sync 1p->3p failed for ${item}: ${err.message}`);
+    }
+  }
+  // Merge MCP servers / preferences / cowork files path from the official
+  // claude_desktop_config.json so memory and connectors work in gateway mode.
+  // The 3p side wins on conflicts; deploymentMode is never touched here.
+  try {
+    const srcCfgPath = path.join(src, 'claude_desktop_config.json');
+    if (fs.existsSync(srcCfgPath)) {
+      const srcCfg = JSON.parse(fs.readFileSync(srcCfgPath, 'utf8'));
+      let dstCfg = {};
+      try { dstCfg = JSON.parse(fs.readFileSync(DESKTOP_3P_CONFIG_PATH, 'utf8')); } catch {}
+      for (const key of ['mcpServers', 'coworkUserFilesPath', 'preferences']) {
+        if (srcCfg[key] !== undefined && dstCfg[key] === undefined) dstCfg[key] = srcCfg[key];
+      }
+      fs.writeFileSync(DESKTOP_3P_CONFIG_PATH, JSON.stringify(dstCfg, null, 2) + '\n');
+    }
+  } catch (err) {
+    logError(`sync 1p->3p config merge failed: ${err.message}`);
+  }
+}
+
+// --- Proxy request log ---------------------------------------------------------
+const PROXY_LOG_MAX = 300;
+const proxyLog = [];
+
+function pushProxyLog(entry) {
+  proxyLog.push({ ts: Date.now(), ...entry });
+  if (proxyLog.length > PROXY_LOG_MAX) proxyLog.shift();
+}
+
+// --- Error logging --------------------------------------------------------------
+function logError(message) {
+  try {
+    fs.appendFileSync(path.join(app.getPath('userData'), 'error.log'), `${new Date().toISOString()} ${message}\n`);
+  } catch {}
+}
+
+process.on('uncaughtException', (err) => {
+  logError(`uncaught: ${err.stack || err.message}`);
+});
+
 // --- IPC handlers -----------------------------------------------------------
 
 ipcMain.handle('claude:detect', () => ({
@@ -861,7 +848,7 @@ ipcMain.handle('config:get', () => {
   };
 });
 
-ipcMain.handle('config:apply', (_evt, cfg) => {
+function doApplyCode(cfg) {
   cfg.apiKey = resolveApiKey(cfg.apiKey);
   const settings = readSettings();
   settings.env = settings.env || {};
@@ -898,16 +885,19 @@ ipcMain.handle('config:apply', (_evt, cfg) => {
   else delete settings.env.ANTHROPIC_SMALL_FAST_MODEL;
   writeSettings(settings);
   return { ok: true };
-});
+}
+
+ipcMain.handle('config:apply', (_evt, cfg) => doApplyCode(cfg));
 
 ipcMain.handle('desktop:get', () => ({
   installed: desktopInstalled(),
   ...readDesktopConfig()
 }));
 
-ipcMain.handle('desktop:apply', (_evt, cfg) => {
+function doApplyDesktop(cfg) {
   cfg.apiKey = resolveApiKey(cfg.apiKey);
   try {
+    syncDesktop1pTo3p();
     if (cfg.viaProxy) {
       // Point Claude Desktop at the local proxy and route real provider models
       // through it. Each model is exposed under a "display route" name so
@@ -938,7 +928,9 @@ ipcMain.handle('desktop:apply', (_evt, cfg) => {
   } catch (err) {
     return { ok: false, error: err.message };
   }
-});
+}
+
+ipcMain.handle('desktop:apply', (_evt, cfg) => doApplyDesktop(cfg));
 
 ipcMain.handle('desktop:restore', () => {
   try {
@@ -992,6 +984,76 @@ ipcMain.handle('app:uninstall', () => {
 });
 
 ipcMain.handle('proxy:status', () => proxyStatus());
+
+ipcMain.handle('proxy:log', () => proxyLog.slice().reverse());
+
+// --- UI state persistence ---
+const uiState = require('./state');
+
+ipcMain.handle('state:get', () => uiState.getStateForRenderer());
+ipcMain.handle('state:set', (_evt, patch) => {
+  uiState.updateStateFromRenderer(patch);
+  updateTray();
+  return true;
+});
+
+// --- Auto-launch at login ---
+ipcMain.handle('app:get-autolaunch', () => app.getLoginItemSettings().openAtLogin);
+ipcMain.handle('app:set-autolaunch', (_evt, on) => {
+  app.setLoginItemSettings({ openAtLogin: Boolean(on) });
+  uiState.updateStateFromRenderer({ autoLaunch: Boolean(on) });
+  return true;
+});
+
+// --- Update check (GitHub releases) ---
+const REPO_SLUG = 'Superior-curtis/OpenClaude';
+ipcMain.handle('app:check-update', async () => {
+  try {
+    const res = await fetch(`https://api.github.com/repos/${REPO_SLUG}/releases/latest`, {
+      headers: { accept: 'application/vnd.github+json', 'user-agent': 'OpenClaude' }
+    });
+    if (!res.ok) return { ok: false };
+    const data = await res.json();
+    const latest = String(data.tag_name || '').replace(/^v/, '');
+    const current = app.getVersion();
+    const newer = latest && latest.localeCompare(current, undefined, { numeric: true }) > 0;
+    return { ok: true, current, latest, newer, url: data.html_url };
+  } catch {
+    return { ok: false };
+  }
+});
+
+// --- Config profiles ---
+// A profile bundles provider + key reference + model choices. Applying one
+// re-runs the same code paths as the Apply buttons.
+function applyProfile(profile) {
+  const keys = uiState.getStateForRenderer().keys;
+  const apiKey = profile.providerId === 'copilot' ? '__copilot_token__' : keys[profile.providerId];
+  if (!apiKey) return { ok: false, error: `No saved API key for provider "${profile.providerId}".` };
+  const base = {
+    baseUrl: profile.baseUrl,
+    apiKey,
+    protocol: profile.protocol,
+    chatPath: profile.chatPath
+  };
+  const results = [];
+  if (profile.targets?.code !== false) {
+    results.push(doApplyCode({ ...base, model: profile.main || null, smallFastModel: profile.fast || null }));
+  }
+  if (profile.targets?.desktop !== false && (profile.desktop || []).length > 0) {
+    const models = profile.desktop;
+    const viaProxy = profile.protocol === 'openai' || models.some((m) => !/(^|\/)claude-/.test(m));
+    results.push(doApplyDesktop(
+      viaProxy
+        ? { ...base, viaProxy: true, models, mainModel: models[0], fastModel: profile.fast || null }
+        : { ...base, models }
+    ));
+  }
+  const failed = results.find((r) => !r.ok);
+  return failed || { ok: true };
+}
+
+ipcMain.handle('profile:apply', (_evt, profile) => applyProfile(profile));
 
 ipcMain.handle('config:restore', () => {
   const settings = readSettings();
@@ -1162,6 +1224,7 @@ ipcMain.handle('copilot:auth-clear', () => {
 app.whenReady().then(() => {
   // Resume the Claude Desktop proxy after a reboot or app restart
   startProxy();
+  updateTray(); // menu-bar mini mode is always available
   // When launched at login purely to serve the proxy, stay in the background
   const loginLaunch = app.getLoginItemSettings().wasOpenedAtLogin;
   if (!(loginLaunch && proxyServer)) createWindow();

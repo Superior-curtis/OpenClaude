@@ -1,6 +1,8 @@
 const { contextBridge, ipcRenderer } = require('electron');
+const { NON_CHAT } = require('./model-filter');
 
 contextBridge.exposeInMainWorld('openclaude', {
+  NON_CHAT,
   detectInstall: () => ipcRenderer.invoke('claude:detect'),
   browseDesktop: () => ipcRenderer.invoke('claude:browse-desktop'),
   copilotAuthStart: () => ipcRenderer.invoke('copilot:auth-start'),
@@ -16,5 +18,13 @@ contextBridge.exposeInMainWorld('openclaude', {
   uninstall: () => ipcRenderer.invoke('app:uninstall'),
   proxyStatus: () => ipcRenderer.invoke('proxy:status'),
   fetchModels: (args) => ipcRenderer.invoke('provider:models', args),
-  testConnection: (args) => ipcRenderer.invoke('provider:test', args)
+  testConnection: (args) => ipcRenderer.invoke('provider:test', args),
+  proxyLog: () => ipcRenderer.invoke('proxy:log'),
+  getState: () => ipcRenderer.invoke('state:get'),
+  setState: (patch) => ipcRenderer.invoke('state:set', patch),
+  getAutoLaunch: () => ipcRenderer.invoke('app:get-autolaunch'),
+  setAutoLaunch: (on) => ipcRenderer.invoke('app:set-autolaunch', on),
+  checkUpdate: () => ipcRenderer.invoke('app:check-update'),
+  applyProfile: (profile) => ipcRenderer.invoke('profile:apply', profile),
+  onStateChanged: (fn) => ipcRenderer.on('state:changed', fn)
 });

@@ -5,9 +5,13 @@
 <h1 align="center">OpenClaude</h1>
 
 <p align="center">
-  Use <strong>Claude Code</strong> and <strong>Claude Desktop</strong> with any AI provider.
+  <strong>Free Claude / Free Claude Code</strong> — use <strong>Claude Code</strong> and <strong>Claude Desktop</strong> with any AI provider.
   <br>
   Pick a provider, paste your key, click apply. No config files, no terminal tricks.
+</p>
+
+<p align="center">
+  <em>Run Claude Code for free with OpenAI, Gemini, Grok, DeepSeek, GLM, Kimi, Qwen, OpenRouter, Groq, NVIDIA NIM, GitHub Copilot, and 18+ providers.</em>
 </p>
 
 <p align="center">
@@ -36,10 +40,10 @@ OpenClaude is a desktop app that configures Claude Code and Claude Desktop to ta
 
 | Platform | Download |
 |----------|----------|
-| **macOS** Apple Silicon | `OpenClaude-0.1.6-arm64.dmg` |
-| **macOS** Intel | `OpenClaude-0.1.6-x64.dmg` |
-| **Windows** x64 | `OpenClaude-Setup-0.1.6-x64.exe` |
-| **Windows** 32-bit | `OpenClaude-Setup-0.1.6-ia32.exe` |
+| **macOS** Apple Silicon | `OpenClaude-0.2.0-arm64.dmg` |
+| **macOS** Intel | `OpenClaude-0.2.0-x64.dmg` |
+| **Windows** x64 | `OpenClaude-Setup-0.2.0-x64.exe` |
+| **Windows** 32-bit | `OpenClaude-Setup-0.2.0-ia32.exe` |
 | **Linux** x64 | `.AppImage` or `.deb` |
 | **Linux** ARM64 | `-arm64.AppImage` or `_arm64.deb` |
 
@@ -121,6 +125,17 @@ CI builds run on every tag push via GitHub Actions across macOS, Windows, and Li
 - The proxy listens on `127.0.0.1` — not reachable from your network
 - No telemetry, no analytics, no network calls except to your chosen provider
 
+## How it works (under the hood)
+
+- **Pure logic is unit-tested** — model routing and Anthropic↔OpenAI translation live in `src/translate.js` with a `node --test` suite that runs in CI before every build.
+- **Settings persist** — your provider, model choices, and API keys (encrypted with the OS keychain via Electron `safeStorage`) are saved, so you never re-paste a key or re-pick a model.
+- **Config profiles** — save provider+model combos and switch between them from the app or the menu-bar icon.
+- **Proxy log** — see exactly which requests were forwarded, the real model used, status, and latency.
+
 ## License
 
 MIT — Built by Curtis
+
+---
+
+<sub><strong>Keywords:</strong> free claude · free claude code · claude code free · claude desktop free · claude code custom api · claude code openai · claude code gemini · claude code deepseek · claude code openrouter · claude code grok · use claude code without subscription · anthropic base url · third party provider claude · ANTHROPIC_BASE_URL · claude code proxy · claude gateway</sub>

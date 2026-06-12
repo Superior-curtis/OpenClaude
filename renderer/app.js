@@ -1,7 +1,10 @@
 // Models that NVIDIA NIM (and some OpenAI-compatible hosts) list but that are
 // NOT chat/completions models — embeddings, rerankers, speech, vision-OCR,
 // image/video generation, biology, etc. Excluded from the picker.
-const NON_CHAT = /embed|rerank|retriev|reranking|\bocr\b|paddleocr|parakeet|canary|riva|\basr\b|\btts\b|\bstt\b|speech|codec|fastpitch|audio2face|maxine|nvclip|\bclip\b|dragon|table-structure|surya|deplot|\bsam[- ]?2?\b|segment|depth|\besm\b|diffdock|molmim|genmol|proteinmpnn|rfdiffusion|boltz|evo2|\bvad\b|imagen|\bveo\b|image-generation|text-to-image|stable-diffusion|sdxl|flux|cosmos|nemoretriever|aqa|guard|safety|content-safety|topic-control|jailbreak|nvidia.neva|nvidia.nemotron.mini|nvidia.nemotron.nano/i;
+// Source of truth lives in src/model-filter.js (also unit-tested); this is a
+// preload-injected copy so the renderer needs no module loader.
+const NON_CHAT = (window.openclaude && window.openclaude.NON_CHAT)
+  || /embed|rerank|retriev|reranking|\bocr\b|paddleocr|parakeet|canary|riva|\basr\b|\btts\b|\bstt\b|speech|codec|fastpitch|audio2face|maxine|nvclip|\bclip\b|dragon|table-structure|surya|deplot|\bsam[- ]?2?\b|segment|depth|\besm\b|diffdock|molmim|genmol|proteinmpnn|rfdiffusion|boltz|evo2|\bvad\b|imagen|\bveo\b|image-generation|text-to-image|stable-diffusion|sdxl|flux|cosmos|nemoretriever|aqa|guard|safety|content-safety|topic-control|jailbreak/i;
 
 const PROVIDERS = [
   // --- Built-in services ---
@@ -59,6 +62,26 @@ const ZWSP = '\u200b';
 const $ = (id) => document.getElementById(id);
 let selectedProvider = PROVIDERS[0];
 let loadedModels = [];
+let uiState = { keys: {}, models: {}, customProviders: [], profiles: [] };
+let providerFilter = '';
+
+// Error boundary: any uncaught renderer error shows a reload overlay instead of
+// a blank window.
+window.addEventListener('error', (e) => showErrorOverlay(e.message || 'Unknown error'));
+window.addEventListener('unhandledrejection', (e) => showErrorOverlay((e.reason && e.reason.message) || 'Unhandled promise rejection'));
+function showErrorOverlay(msg) {
+  const el = document.getElementById('errorOverlay');
+  if (!el) return;
+  document.getElementById('errorOverlayMsg').textContent = msg;
+  el.classList.remove('hidden');
+}
+
+function allProviders() {
+  // Saved custom presets appear right before the "Custom\u2026" tile.
+  const customTile = PROVIDERS[PROVIDERS.length - 1];
+  const builtins = PROVIDERS.slice(0, -1);
+  return [...builtins, ...uiState.customProviders, customTile];
+}
 
 function isCustom() { return selectedProvider.id === 'custom'; }
 function currentBaseUrl() { return isCustom() ? $('customUrl').value.trim() : selectedProvider.baseUrl; }
@@ -84,6 +107,10 @@ function showResult(ok, message) {
   el.textContent = message;
 }
 
+function hideResult() {
+  $('result').classList.add('hidden');
+}
+
 function setBusy(busy) {
   for (const id of ['testBtn', 'applyBtn', 'restoreBtn', 'applyDesktopBtn', 'restoreDesktopBtn', 'loadModelsBtn']) $(id).disabled = busy;
 }
@@ -99,30 +126,48 @@ function validate() {
 
 // --- Provider tiles ----------------------------------------------------------
 
+function selectProvider(p) {
+  selectedProvider = p;
+  loadedModels = [];
+  $('customRow').classList.toggle('hidden', p.id !== 'custom');
+  const isCopilot = p.auth === 'device';
+  $('apiKeyRow').classList.toggle('hidden', isCopilot);
+  $('copilotAuthRow').classList.toggle('hidden', !isCopilot);
+  $('desktopModelsWrap').classList.add('hidden');
+  $('modelSelect').innerHTML = '<option value="">Provider default</option>';
+  $('fastModelSelect').innerHTML = '<option value="">Provider default</option>';
+  // Restore the saved key + model choices for this provider, if any.
+  $('apiKey').value = uiState.keys[p.id] || '';
+  const saved = uiState.models[p.id];
+  if (saved && (loadedModels.length || saved.main)) restoreSavedModels(saved);
+  persistSelection();
+  renderProviders();
+  hideResult();
+}
+
 function renderProviders() {
   const grid = $('providerGrid');
   grid.innerHTML = '';
-  for (const p of PROVIDERS) {
+  const f = providerFilter.toLowerCase();
+  for (const p of allProviders()) {
+    if (f && !(`${p.name} ${p.desc || ''}`.toLowerCase().includes(f))) continue;
     const btn = document.createElement('button');
     btn.className = 'ptile' + (p.id === selectedProvider.id ? ' sel' : '');
     const proto = p.id === 'custom' ? '' : `<span class="proto">${p.protocol === 'openai' ? 'OpenAI' : 'Anthropic'}</span>`;
-    btn.innerHTML = `${proto}<div class="pn">${p.name}</div><div class="pd">${p.desc}</div>`;
-    btn.addEventListener('click', () => {
-      selectedProvider = p;
-      loadedModels = [];
-      $('customRow').classList.toggle('hidden', p.id !== 'custom');
-      const isCopilot = p.auth === 'device';
-      $('apiKeyRow').classList.toggle('hidden', isCopilot);
-      $('copilotAuthRow').classList.toggle('hidden', !isCopilot);
-      $('desktopModelsWrap').classList.add('hidden');
-      $('modelSelect').innerHTML = '<option value="">Provider default</option>';
-      $('fastModelSelect').innerHTML = '<option value="">Provider default</option>';
-      renderProviders();
-      hideResult();
+    const removable = p.custom ? `<span class="x" title="Remove preset" data-remove="${p.id}">✕</span>` : '';
+    btn.innerHTML = `${proto}<div class="pn">${p.name} ${removable}</div><div class="pd">${p.desc || p.baseUrl || ''}</div>`;
+    btn.addEventListener('click', (e) => {
+      if (e.target.dataset && e.target.dataset.remove) {
+        uiState.customProviders = uiState.customProviders.filter((c) => c.id !== e.target.dataset.remove);
+        window.openclaude.setState({ customProviders: uiState.customProviders });
+        renderProviders();
+        return;
+      }
+      selectProvider(p);
     });
     grid.appendChild(btn);
   }
-  $('providerHint').textContent = selectedProvider.keyHint;
+  $('providerHint').textContent = selectedProvider.keyHint || `Custom ${selectedProvider.protocol} provider.`;
 }
 
 // --- Models ------------------------------------------------------------------
@@ -201,6 +246,7 @@ async function loadModels() {
   fillSelect($('modelSelect'), models, ['claude-sonnet-4-5', 'gpt-5.5', 'gemini-3-pro', 'grok-4', 'sonar-pro', 'deepseek-chat']);
   fillSelect($('fastModelSelect'), models, ['claude-haiku-4-5', 'gpt-5-nano', 'gemini-3-flash', 'sonar', 'deepseek-chat']);
   renderDesktopChecks(models);
+  persistModels();
   showResult(true, `Loaded ${models.length} models.`);
 }
 
@@ -464,7 +510,153 @@ async function copilotLoadModels() {
   fillSelect($('modelSelect'), models, ['gpt-5', 'claude-sonnet-4-5', 'gemini-3-flash']);
   fillSelect($('fastModelSelect'), models, ['gpt-5-nano', 'claude-haiku-4-5']);
   renderDesktopChecks(models);
+  persistModels();
   showResult(true, `Loaded ${models.length} models.`);
+}
+
+// --- Persistence -------------------------------------------------------------
+
+function persistSelection() {
+  window.openclaude.setState({ selectedProviderId: selectedProvider.id });
+}
+
+// Persist the current API key under the active provider (debounced on input).
+function persistKey() {
+  if (selectedProvider.auth === 'device') return;
+  const key = $('apiKey').value.trim();
+  uiState.keys[selectedProvider.id] = key;
+  window.openclaude.setState({ keys: { [selectedProvider.id]: key } });
+}
+
+function persistModels() {
+  uiState.models[selectedProvider.id] = {
+    main: $('modelSelect').value || '',
+    fast: $('fastModelSelect').value || '',
+    desktop: checkedDesktopModels()
+  };
+  window.openclaude.setState({ models: uiState.models });
+}
+
+function restoreSavedModels(saved) {
+  if (!saved) return;
+  const opts = new Set([saved.main, saved.fast, ...(saved.desktop || [])].filter(Boolean));
+  if (opts.size === 0) return;
+  // Seed the selects/checks from the saved set so a relaunch shows the choice
+  // even before the user re-loads the live model list.
+  fillSelect($('modelSelect'), [...opts], [saved.main]);
+  fillSelect($('fastModelSelect'), [...opts], [saved.fast]);
+  $('modelSelect').value = saved.main || '';
+  $('fastModelSelect').value = saved.fast || '';
+}
+
+async function loadPersistedState() {
+  uiState = await window.openclaude.getState();
+  uiState.keys = uiState.keys || {};
+  uiState.models = uiState.models || {};
+  uiState.customProviders = (uiState.customProviders || []).map((c) => ({ ...c, custom: true }));
+  uiState.profiles = uiState.profiles || [];
+  const all = allProviders();
+  const last = all.find((p) => p.id === uiState.selectedProviderId);
+  renderProviders();
+  renderProfiles();
+  if (last) selectProvider(last);
+}
+
+// --- Custom presets ----------------------------------------------------------
+
+function saveCustomPreset() {
+  const name = $('customPresetName').value.trim();
+  const baseUrl = $('customUrl').value.trim();
+  if (!name || !baseUrl) { showResult(false, 'Enter a preset name and base URL first.'); return; }
+  const preset = {
+    id: 'custom-' + Date.now().toString(36),
+    name,
+    baseUrl,
+    protocol: $('customProtocol').value,
+    desc: baseUrl,
+    custom: true,
+    keyHint: 'Saved custom provider.'
+  };
+  uiState.customProviders.push(preset);
+  window.openclaude.setState({ customProviders: uiState.customProviders.map(({ custom, ...c }) => c) });
+  $('customPresetName').value = '';
+  renderProviders();
+  selectProvider(preset);
+  showResult(true, `Saved preset "${name}".`);
+}
+
+// --- Config profiles ---------------------------------------------------------
+
+function renderProfiles() {
+  const row = $('profilesRow');
+  if (!uiState.profiles.length) { row.classList.add('hidden'); return; }
+  row.classList.remove('hidden');
+  row.innerHTML = '';
+  uiState.profiles.forEach((p, i) => {
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+    chip.innerHTML = `<span data-apply="${i}">${p.name}</span><span class="x" data-del="${i}" title="Delete">✕</span>`;
+    chip.addEventListener('click', async (e) => {
+      if (e.target.dataset.del !== undefined) {
+        uiState.profiles.splice(Number(e.target.dataset.del), 1);
+        window.openclaude.setState({ profiles: uiState.profiles });
+        renderProfiles();
+        return;
+      }
+      setBusy(true);
+      const res = await window.openclaude.applyProfile(p);
+      setBusy(false);
+      showResult(res.ok, res.ok ? `✓ Applied profile "${p.name}". Restart Claude Code / Desktop.` : `Failed: ${res.error}`);
+      refreshStatus();
+    });
+    row.appendChild(chip);
+  });
+}
+
+function saveProfile() {
+  const name = prompt('Profile name (e.g. "Go GLM", "OpenAI GPT-5"):');
+  if (!name) return;
+  const cfg = providerCfg();
+  const desktop = checkedDesktopModels();
+  const profile = {
+    name,
+    providerId: selectedProvider.id,
+    baseUrl: cfg.baseUrl,
+    protocol: cfg.protocol,
+    chatPath: cfg.chatPath,
+    main: $('modelSelect').value || '',
+    fast: $('fastModelSelect').value || '',
+    desktop: desktop.length ? desktop : [$('modelSelect').value].filter(Boolean)
+  };
+  uiState.profiles.push(profile);
+  window.openclaude.setState({ profiles: uiState.profiles });
+  renderProfiles();
+  showResult(true, `Saved profile "${name}". Apply it any time from here or the menu-bar icon.`);
+}
+
+// --- Proxy log ---------------------------------------------------------------
+
+async function refreshLog() {
+  const log = await window.openclaude.proxyLog();
+  const body = $('proxyLogBody');
+  if (!log.length) { body.textContent = 'No requests yet. The log fills up while Claude Desktop / Code use the local proxy.'; return; }
+  body.innerHTML = log.slice(0, 60).map((e) => {
+    const t = new Date(e.ts).toLocaleTimeString();
+    const cls = e.status >= 400 ? 'err' : 'ok';
+    const route = e.modelIn && e.modelIn !== e.modelOut ? `${e.modelIn} → ${e.modelOut}` : (e.modelOut || e.path);
+    return `<div><span class="${cls}">${e.status}</span> ${t} · ${route} · ${e.ms}ms${e.stream ? ' · stream' : ''}</div>`;
+  }).join('');
+}
+
+// --- Update check ------------------------------------------------------------
+
+async function checkUpdate() {
+  const u = await window.openclaude.checkUpdate();
+  if (u.ok && u.newer) {
+    const b = $('updateBanner');
+    b.className = 'result result-ok';
+    b.innerHTML = `A new version (v${u.latest}) is available — you have v${u.current}. <a href="${u.url}" style="color:inherit;text-decoration:underline">Download</a>`;
+  }
 }
 
 // --- Wire up -----------------------------------------------------------------
@@ -472,6 +664,9 @@ async function copilotLoadModels() {
 $('toggleKey').addEventListener('click', () => {
   const i = $('apiKey'); i.type = i.type === 'password' ? 'text' : 'password';
 });
+$('apiKey').addEventListener('input', persistKey);
+$('modelSelect').addEventListener('change', persistModels);
+$('fastModelSelect').addEventListener('change', persistModels);
 $('loadModelsBtn').addEventListener('click', loadModels);
 $('testBtn').addEventListener('click', testConnection);
 $('applyBtn').addEventListener('click', applyConfig);
@@ -482,8 +677,21 @@ $('uninstallBtn').addEventListener('click', uninstallApp);
 $('copilotLoginBtn').addEventListener('click', copilotLogin);
 $('copilotLogoutBtn').addEventListener('click', copilotLogout);
 $('loadModelsBtn2').addEventListener('click', copilotLoadModels);
+$('providerSearch').addEventListener('input', (e) => { providerFilter = e.target.value; renderProviders(); });
+$('saveCustomBtn').addEventListener('click', saveCustomPreset);
+$('saveProfileBtn').addEventListener('click', saveProfile);
+$('logRefreshBtn').addEventListener('click', refreshLog);
 
-renderProviders();
+// Auto-launch toggle
+(async () => { $('autoLaunchToggle').checked = await window.openclaude.getAutoLaunch(); })();
+$('autoLaunchToggle').addEventListener('change', (e) => window.openclaude.setAutoLaunch(e.target.checked));
+
+// Tray profile-switch tells the renderer to refresh
+window.openclaude.onStateChanged(() => { refreshStatus(); });
+
+// Persist desktop-model checkboxes whenever they change (event delegation)
+$('desktopModels').addEventListener('change', persistModels);
+
 detectInstall();
 
 // Check Copilot auth status on startup
@@ -496,4 +704,8 @@ detectInstall();
   }
 })();
 
+loadPersistedState();
 refreshStatus();
+refreshLog();
+checkUpdate();
+setInterval(refreshLog, 5000);
