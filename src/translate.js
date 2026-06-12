@@ -80,7 +80,14 @@ function anthropicToOpenAi(json) {
       }
       const text = blocks.filter((b) => b.type === 'text').map((b) => b.text).join('\n');
       const hadToolResults = blocks.some((b) => b.type === 'tool_result');
-      if (text || !hadToolResults) msgs.push({ role: 'user', content: text });
+      if (text || !hadToolResults) {
+        msgs.push({ role: 'user', content: text });
+      } else {
+        // OpenAI requires at least one non-tool message — when a turn has
+        // tool results but no text, inject a minimal user input so providers
+        // like DeepSeek don't reject the request as "empty input messages".
+        msgs.push({ role: 'user', content: '.' });
+      }
     }
   }
   out.messages = msgs;
